@@ -21,7 +21,8 @@ npm run dev                 # http://localhost:3000
 | متغیر | توضیح |
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | نشانی پروژه Supabase (Settings → API) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | کلید عمومی (محافظت‌شده با RLS) |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | کلید عمومی جدید (مناسب مرورگر؛ حفاظت داده‌ها با RLS انجام می‌شود) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | متغیر سازگاری اختیاری برای استقرارهای قدیمی؛ کلید publishable در صورت وجود اولویت دارد |
 | `SUPABASE_SERVICE_ROLE_KEY` | **فقط سرور** — هرگز در کد مرورگر استفاده نمی‌شود |
 | `RASTA_SETUP_TOKEN` | توکن یک‌بارمصرف راه‌اندازی نخستین مدیر (`node -e "console.log(crypto.randomUUID())"`) |
 
@@ -62,7 +63,7 @@ npm run test:e2e     # Playwright: دسکتاپ + موبایل (نیازمند �
 ## ۴. استقرار روی Vercel
 
 ۱. ریپازیتوری را به Vercel وصل کنید (Framework: Next.js — پیش‌فرض).
-۲. متغیرهای محیطی چهارگانه بالا را در Project → Settings → Environment Variables ثبت کنید (Production و Preview جدا).
+۲. متغیرهای محیطی لازم جدول بالا را در Project → Settings → Environment Variables ثبت کنید (Production و Preview جدا). متغیر `NEXT_PUBLIC_SUPABASE_ANON_KEY` اختیاری و فقط برای سازگاری با استقرارهای قدیمی است.
 ۳. بررسی‌های پیش از استقرار: `npm run build`.
 ۴. پس از اولین استقرار، `/setup` را فقط یک‌بار روی محیط Production اجرا کنید (توکن را پس از آن از env حذف کنید — صفحه به‌هرحال قفل می‌شود).
 ۵. دود-تست پس از استقرار: ورود مدیر → داشبورد → ثبت متقاضی → خروجی CSV → خروج.
