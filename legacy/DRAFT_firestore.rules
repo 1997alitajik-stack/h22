@@ -1,0 +1,124 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Default Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Hardened Global Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Trusted RBAC check from database document (Never trust client token claims)
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Validation helper for General Applicant records (Non-sensitive profile)
+    // CRITICAL SECURITY ENFORCEMENT:
+    // General applicant document must NEVER contain full National ID, full home address,
+    // previous salaries, or unmasked sensitive PII.
+    function isValidGeneralApplicant(data) {
+      return data.id is string && data.id.size() <= 60
+        && data.firstName is string && data.firstName.size() <= 80
+        && data.lastName is string && data.lastName.size() <= 80
+        && data.fullName is string && data.fullName.size() <= 160
+        && data.primaryJobTitle is string && data.primaryJobTitle.size() <= 150
+        && data.primaryJobCategory is string && data.primaryJobCategory.size() <= 100
+        && data.yearsOfExperience is number && data.yearsOfExperience >= 0 && data.yearsOfExperience <= 60
+        && (data.groupPriority in ['VERIFIED_PARENT', 'VERIFIED_SUBSIDIARY', 'PENDING_VERIFICATION', 'NO_GROUP_HISTORY', 'INSUFFICIENT_DATA'])
+        && (data.recruitmentStatus in ['NEW', 'UNDER_REVIEW', 'INTERVIEWING', 'SHORTLISTED', 'OFFERED', 'HIRED', 'REJECTED', 'ARCHIVED'])
+        // Enforce absence of raw sensitive PII in public/viewer-accessible document
+        && (!('nationalIdFull' in data) || data.nationalIdFull == null)
+        && (!('homeAddressFull' in data) || data.homeAddressFull == null)
+        && (!('lastSalary' in data) || data.lastSalary == null);
+    }
+
+    // 3. Applicants Collection (General HR profile - accessible to Authenticated Staff)
+    match /applicants/{applicantId} {
+      allow get, list: if isSignedIn() && isValidId(applicantId);
+      allow create: if isAdmin() && isValidId(applicantId) && isValidGeneralApplicant(incoming());
+      allow update: if isAdmin() && isValidId(applicantId) && isValidGeneralApplicant(incoming());
+      allow delete: if isAdmin() && isValidId(applicantId);
+
+      // Subcollection: applicant_sensitive (Strictly Isolated PII - ADMIN ONLY)
+      // Contains: nationalIdFull, homeAddressFull, previousSalaries, confidentialNotes
+      match /applicant_sensitive/{subDocId} {
+        allow get, list: if isAdmin() && isValidId(subDocId);
+        allow create, update, delete: if isAdmin() && isValidId(subDocId);
+      }
+    }
+
+    // 4. Vacancies Collection
+    match /vacancies/{vacancyId} {
+      allow get, list: if isSignedIn() && isValidId(vacancyId);
+      allow create, update, delete: if isAdmin() && isValidId(vacancyId);
+    }
+
+    // 5. Subsidiaries Collection
+    match /subsidiaries/{subsidiaryId} {
+      allow get, list: if isSignedIn() && isValidId(subsidiaryId);
+      allow create, update, delete: if isAdmin() && isValidId(subsidiaryId);
+    }
+
+    // 6. Projects Collection
+    match /projects/{projectId} {
+      allow get, list: if isSignedIn() && isValidId(projectId);
+      allow create, update, delete: if isAdmin() && isValidId(projectId);
+    }
+
+    // 7. Users Collection
+    match /users/{userId} {
+      allow get, list: if isSignedIn() && isValidId(userId);
+      // Users cannot grant themselves roles or modify other users without admin privileges
+      allow create, update, delete: if isAdmin() && isValidId(userId);
+    }
+
+    // 8. Admins Lookup Collection (Trusted authority table)
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && isValidId(adminUid);
+      allow list: if isAdmin();
+      allow write: if isAdmin() && isValidId(adminUid);
+    }
+
+    // 9. Audit Events (Two Distinct Channels)
+    // Channel A: System/Admin Security Logs (Trusted backend/Admin only)
+    match /audit_events_admin/{eventId} {
+      allow get, list: if isAdmin() && isValidId(eventId);
+      allow create: if isAdmin() && isValidId(eventId);
+      allow update, delete: if false; // STRICTLY IMMUTABLE
+    }
+
+    // Channel B: User Client Activity Logs (Restricted to non-privileged UI actions)
+    match /audit_events_client/{eventId} {
+      allow get, list: if isAdmin() && isValidId(eventId);
+      allow create: if isSignedIn() && isValidId(eventId)
+        && incoming().actorUid == request.auth.uid
+        && incoming().category in ['VIEW_RESUME', 'SEARCH_DIRECTORY', 'EXPORT_LIST']
+        && incoming().severity == 'LOW';
+      allow update, delete: if false; // STRICTLY IMMUTABLE
+    }
+
+    // 10. Controlled Vocabulary
+    match /controlled_vocabulary/{vocabDoc} {
+      allow get, list: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

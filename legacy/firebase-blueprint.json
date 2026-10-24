@@ -1,0 +1,225 @@
+{
+  "entities": {
+    "Applicant": {
+      "title": "Applicant",
+      "description": "Comprehensive HR resume pool applicant record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique applicant ID" },
+        "firstName": { "type": "string", "maxLength": 80 },
+        "lastName": { "type": "string", "maxLength": 80 },
+        "fullName": { "type": "string", "maxLength": 160 },
+        "fatherName": { "type": "string", "maxLength": 80 },
+        "nationalIdMasked": { "type": "string", "maxLength": 30 },
+        "nationalIdFull": { "type": "string", "maxLength": 30 },
+        "birthDate": { "type": "string", "maxLength": 20 },
+        "birthPlace": { "type": "string", "maxLength": 60 },
+        "residentialCity": { "type": "string", "maxLength": 60 },
+        "addressSummary": { "type": "string", "maxLength": 300 },
+        "phoneNumberMasked": { "type": "string", "maxLength": 30 },
+        "phoneNumberFull": { "type": "string", "maxLength": 30 },
+        "alternativePhone": { "type": "string", "maxLength": 30 },
+        "email": { "type": "string", "maxLength": 100 },
+        "avatarInitials": { "type": "string", "maxLength": 10 },
+        "primaryJobTitle": { "type": "string", "maxLength": 150 },
+        "primaryJobCategory": { "type": "string", "maxLength": 100 },
+        "yearsOfExperience": { "type": "number" },
+        "highestDegree": { "type": "string", "maxLength": 50 },
+        "highestDegreeTitle": { "type": "string", "maxLength": 100 },
+        "highestFieldOfStudy": { "type": "string", "maxLength": 100 },
+        "groupPriority": {
+          "type": "string",
+          "enum": [
+            "VERIFIED_PARENT",
+            "VERIFIED_SUBSIDIARY",
+            "PENDING_VERIFICATION",
+            "NO_GROUP_HISTORY",
+            "INSUFFICIENT_DATA"
+          ]
+        },
+        "groupPriorityReason": { "type": "string", "maxLength": 300 },
+        "recruitmentStatus": {
+          "type": "string",
+          "enum": [
+            "NEW",
+            "UNDER_REVIEW",
+            "INTERVIEWING",
+            "SHORTLISTED",
+            "OFFERED",
+            "HIRED",
+            "REJECTED",
+            "ARCHIVED"
+          ]
+        },
+        "profileCompleteness": { "type": "number" },
+        "registeredAt": { "type": "string", "maxLength": 30 },
+        "updatedAt": { "type": "string", "maxLength": 30 }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "fullName",
+        "primaryJobTitle",
+        "primaryJobCategory",
+        "groupPriority",
+        "recruitmentStatus"
+      ]
+    },
+    "Vacancy": {
+      "title": "Vacancy",
+      "description": "Job opening and recruitment quota specification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 50 },
+        "code": { "type": "string", "maxLength": 50 },
+        "title": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "maxLength": 100 },
+        "organizationType": { "type": "string", "enum": ["PARENT", "SUBSIDIARY"] },
+        "organizationName": { "type": "string", "maxLength": 150 },
+        "subsidiaryId": { "type": "string", "maxLength": 50 },
+        "projectName": { "type": "string", "maxLength": 150 },
+        "city": { "type": "string", "maxLength": 80 },
+        "openPositionsCount": { "type": "number" },
+        "employmentType": { "type": "string", "maxLength": 50 },
+        "requiredDegree": { "type": "string", "maxLength": 50 },
+        "minimumYearsExperience": { "type": "number" },
+        "description": { "type": "string", "maxLength": 2000 },
+        "status": {
+          "type": "string",
+          "enum": ["OPEN", "IN_PROGRESS", "FILLED", "CANCELLED"]
+        },
+        "openedAt": { "type": "string", "maxLength": 30 }
+      },
+      "required": ["id", "code", "title", "category", "organizationType", "city", "status"]
+    },
+    "Subsidiary": {
+      "title": "Subsidiary",
+      "description": "Organization subsidiary company entity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 50 },
+        "code": { "type": "string", "maxLength": 50 },
+        "name": { "type": "string", "maxLength": 150 },
+        "persianName": { "type": "string", "maxLength": 150 },
+        "field": { "type": "string", "maxLength": 200 },
+        "city": { "type": "string", "maxLength": 80 },
+        "activeProjectsCount": { "type": "number" },
+        "employeeCountEstimate": { "type": "number" },
+        "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE"] }
+      },
+      "required": ["id", "code", "persianName", "city", "status"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Worksite or regional infrastructure project",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 50 },
+        "subsidiaryId": { "type": "string", "maxLength": 50 },
+        "subsidiaryName": { "type": "string", "maxLength": 150 },
+        "name": { "type": "string", "maxLength": 150 },
+        "city": { "type": "string", "maxLength": 80 },
+        "status": { "type": "string", "enum": ["ACTIVE", "COMPLETED", "PLANNING"] },
+        "startDate": { "type": "string", "maxLength": 30 },
+        "type": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["id", "subsidiaryName", "name", "city", "status"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with role-based access information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "username": { "type": "string", "maxLength": 80 },
+        "email": { "type": "string", "maxLength": 120 },
+        "role": { "type": "string", "enum": ["ADMIN", "VIEWER"] },
+        "roleTitle": { "type": "string", "maxLength": 80 },
+        "department": { "type": "string", "maxLength": 120 },
+        "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE"] },
+        "createdAt": { "type": "string", "maxLength": 30 },
+        "lastLoginAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "name", "email", "role", "status"]
+    },
+    "ApplicantSensitiveRecord": {
+      "title": "ApplicantSensitiveRecord",
+      "description": "Confidential PII stored strictly in isolated subcollection for ADMIN access only",
+      "type": "object",
+      "properties": {
+        "applicantId": { "type": "string", "maxLength": 60 },
+        "nationalIdFull": { "type": "string", "maxLength": 30 },
+        "homeAddressFull": { "type": "string", "maxLength": 300 },
+        "phoneNumberFull": { "type": "string", "maxLength": 30 },
+        "updatedAt": { "type": "string", "maxLength": 30 },
+        "updatedBy": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["applicantId", "nationalIdFull", "homeAddressFull", "phoneNumberFull"]
+    },
+    "AuditEvent": {
+      "title": "AuditEvent",
+      "description": "Immutable operational log entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 60 },
+        "timestamp": { "type": "string", "maxLength": 50 },
+        "actorUid": { "type": "string", "maxLength": 100 },
+        "actorName": { "type": "string", "maxLength": 100 },
+        "actorRole": { "type": "string", "maxLength": 60 },
+        "channel": { "type": "string", "enum": ["ADMIN_SECURITY", "CLIENT_ACTIVITY"] },
+        "category": { "type": "string", "maxLength": 60 },
+        "categoryLabel": { "type": "string", "maxLength": 60 },
+        "recordIdentifier": { "type": "string", "maxLength": 80 },
+        "summary": { "type": "string", "maxLength": 300 },
+        "details": { "type": "string", "maxLength": 1000 },
+        "severity": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+        "outcome": { "type": "string", "enum": ["SUCCESS", "WARNING", "FAILED"] }
+      },
+      "required": ["id", "timestamp", "actorName", "category", "summary", "outcome"]
+    }
+  },
+  "firestore": {
+    "/applicants/{applicantId}": {
+      "schema": "Applicant",
+      "description": "Candidate records and public/viewer profile data (without unmasked sensitive PII)"
+    },
+    "/applicants/{applicantId}/applicant_sensitive/default": {
+      "schema": "ApplicantSensitiveRecord",
+      "description": "Strictly isolated confidential PII subcollection accessible only to verified ADMIN"
+    },
+    "/vacancies/{vacancyId}": {
+      "schema": "Vacancy",
+      "description": "Active and filled job openings"
+    },
+    "/subsidiaries/{subsidiaryId}": {
+      "schema": "Subsidiary",
+      "description": "Subsidiaries of parent organization"
+    },
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Worksites and regional engineering projects"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "System user profiles"
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Trusted administrative lookup document"
+    },
+    "/audit_events_admin/{eventId}": {
+      "schema": "AuditEvent",
+      "description": "Sensitive server/admin security audit records (append-only, admin only)"
+    },
+    "/audit_events_client/{eventId}": {
+      "schema": "AuditEvent",
+      "description": "User client UI activity records (append-only, low-severity client events only)"
+    },
+    "/controlled_vocabulary/vocab": {
+      "schema": "object",
+      "description": "System-wide controlled vocabulary and option lists"
+    }
+  }
+}
