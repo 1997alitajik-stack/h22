@@ -145,12 +145,20 @@ test.describe.serial('vacancy & candidacy lifecycle (admin)', () => {
     // Link the applicant created earlier in the run.
     await page.getByRole('link', { name: new RegExp(vacTitle) }).first().click();
     await page.getByRole('button', { name: 'معرفی متقاضی از استخر' }).click();
-    await page.getByLabel('انتخاب متقاضی از استخر رزومه').selectOption({ label: new RegExp(FIRST) }).catch(() => undefined);
-    // Fallback: select by matching text prefix via value lookup
+    // Select the exact applicant by option text; selectOption expects a string label/value,
+    // and Array.find callbacks cannot contain await expressions.
     const select = page.getByLabel('انتخاب متقاضی از استخر رزومه');
-    const options = await select.locator('option').all();
-    const match = options.find((o) => (await o.textContent())?.includes(FIRST) && (await o.textContent())?.includes(LAST));
-    if (match) await select.selectOption((await match.getAttribute('value')) ?? '');
+    const options = await select.locator('option').evaluateAll((nodes) =>
+      nodes.map((node) => {
+        const option = node as HTMLOptionElement;
+        return { value: option.value, text: option.textContent ?? '' };
+      }),
+    );
+    const match = options.find((option) => option.text.includes(FIRST) && option.text.includes(LAST));
+    if (!match) {
+      throw new Error('Could not find the newly created applicant option: ' + FIRST + ' ' + LAST);
+    }
+    await select.selectOption(match.value);
     await page.getByRole('button', { name: 'اتصال به موقعیت شغلی' }).click();
 
     await expect(page.getByRole('table').getByText(FIRST)).toBeVisible({ timeout: 15_000 });
