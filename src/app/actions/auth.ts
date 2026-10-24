@@ -107,7 +107,7 @@ export async function setupAction(_prev: ActionState, formData: FormData): Promi
 
   // The handle_new_user trigger already created the profile row with role
   // VIEWER — promote it to the first administrator.
-  const { error: promoteError } = await supabase
+  const { error: promoteError } = await admin
     .from('profiles')
     .update({ role: 'ADMIN', full_name: parsed.data.fullName, status: 'ACTIVE' })
     .eq('id', created.user.id);
