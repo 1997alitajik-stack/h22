@@ -8,8 +8,8 @@ export interface BrandLogoProps {
   className?: string;
 }
 
-const LOGO_WIDTH = 448;
-const LOGO_HEIGHT = 568;
+const LOGO_WIDTH = 330;
+const LOGO_HEIGHT = 419;
 
 /** Layered HERA artwork with a real CSS 3D extrusion effect while rotating. */
 function ThreeDimensionalLogo({ depth, priority = false }: { depth: number; priority?: boolean }) {
