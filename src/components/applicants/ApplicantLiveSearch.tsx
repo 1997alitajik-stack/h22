@@ -37,11 +37,9 @@ export function ApplicantLiveSearch({
 
   function changeValue(nextValue: string) {
     if (value === undefined) setUncontrolledValue(nextValue);
-    if (nextValue.trim().length < 2) {
-      setResults([]);
-      setLoading(false);
-      setRequestError(false);
-    }
+    setResults([]);
+    setRequestError(false);
+    setLoading(nextValue.trim().length >= 2);
     onChange?.(nextValue);
   }
 
@@ -49,8 +47,6 @@ export function ApplicantLiveSearch({
     if (term.length < 2) return;
 
     const controller = new AbortController();
-    setLoading(true);
-    setRequestError(false);
     const timer = window.setTimeout(async () => {
       try {
         const response = await fetch('/api/applicants/search?q=' + encodeURIComponent(term), {
