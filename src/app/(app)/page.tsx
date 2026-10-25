@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/auth';
 import { getDashboardMetrics } from '@/server/dashboard';
 import { toPersianDigits } from '@/lib/persian';
 import { PriorityBadge, RecruitmentStatusBadge } from '@/components/ui/Badges';
+import { RECRUITMENT_STATUS_LABELS } from '@/lib/domain/labels';
 import { BrandMark } from '@/components/layout/BrandMark';
 import {
   ArrowLeft,
@@ -149,7 +150,7 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             {metrics.status_distribution.map((st) => (
               <div key={st.status} className="rounded-[var(--radius-md)] border border-slate-100 bg-slate-50 p-3 text-center">
-                <div className="mb-1 text-[11px] text-slate-500">{st.status}</div>
+                <div className="mb-1 text-[11px] text-slate-500">{RECRUITMENT_STATUS_LABELS[st.status]}</div>
                 <div className="num text-lg font-bold text-slate-900">{toPersianDigits(st.count)}</div>
               </div>
             ))}
