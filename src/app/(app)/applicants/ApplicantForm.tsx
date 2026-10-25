@@ -131,7 +131,7 @@ export function ApplicantForm({ mode, applicantId, applicantCode, cities, catego
 
   function handlePhotoSelected(file: File | null) {
     if (!file) return;
-    if (!['image/jpeg', 'image/png'].includes(file.type) || !/\\.(jpe?g|png)$/i.test(file.name)) {
+    if (!['image/jpeg', 'image/png'].includes(file.type) || !/\.(jpe?g|png)$/i.test(file.name)) {
       setFormError('برای تصویر پروفایل فقط فایل JPG یا PNG قابل قبول است.');
       return;
     }
