@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import type { ProfileRow, SessionUser } from '@/types';
 
@@ -37,10 +38,11 @@ async function countActiveAdmins(): Promise<number> {
 
 export async function listUsers(actor: SessionUser): Promise<ProfileRow[]> {
   requireAdmin(actor);
-  // Profiles intentionally have no client-side write policy. User administration
-  // uses the server-only service-role client after the administrator role guard.
-  const admin = createSupabaseAdminClient();
-  const { data, error } = await admin
+  // The profiles_select_self RLS policy allows active admins to read all profiles.
+  // Use the request-bound session client for listing; only write/provisioning operations
+  // require the privileged service-role client.
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
     .from('profiles')
     .select(PROFILE_COLUMNS)
     .order('created_at', { ascending: true });

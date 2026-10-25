@@ -27,9 +27,9 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       {/* Compact identity strip — the oversized decorative hero was removed. */}
-      <section className="flex flex-col justify-between gap-4 rounded-[var(--radius-lg)] border border-slate-200 bg-[var(--color-structure)] p-5 text-white sm:flex-row sm:items-center">
+      <section data-tour="dashboard-overview" className="flex flex-col justify-between gap-4 rounded-[var(--radius-lg)] border border-slate-200 bg-[var(--color-structure)] p-5 text-white sm:flex-row sm:items-center">
         <div className="flex items-center gap-4">
-          <BrandMark size="md" theme="dark" withText={false} />
+          <BrandMark size="md" theme="dark" withText />
           <div>
             <h1 className="text-lg font-extrabold tracking-tight">داشبورد مدیریت</h1>
             <p className="text-xs text-teal-300/90">
@@ -47,7 +47,7 @@ export default async function DashboardPage() {
       </section>
 
       {/* KPI cards */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="شاخص‌های کلیدی">
+      <section data-tour="dashboard-kpis" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="شاخص‌های کلیدی">
         <KpiCard
           title="کل پرونده‌های ثبت‌شده"
           value={toPersianDigits(metrics.total_applicants)}
@@ -111,7 +111,7 @@ export default async function DashboardPage() {
         </section>
 
         {/* Priority breakdown — explains the 5 classes */}
-        <section className="flex flex-col rounded-[var(--radius-lg)] border border-slate-200 bg-white p-5" aria-label="وضعیت اولویت سازمانی">
+        <section data-tour="dashboard-priority" className="flex flex-col rounded-[var(--radius-lg)] border border-slate-200 bg-white p-5" aria-label="وضعیت اولویت سازمانی">
           <SectionHeader title="وضعیت اولویت سازمانی در استخر" hint="بر مبنای سیاست تقدم سابقه خدمت" />
           <div className="space-y-3">
             <PriorityRow icon={<Building2 className="h-4 w-4 text-emerald-700" aria-hidden />} label="سابقه تأییدشده سازمان مادر" sub="اولویت عالی جذب" value={metrics.verified_parent} tone="emerald" />
@@ -159,7 +159,7 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Recent applicants */}
-        <section className="overflow-hidden rounded-[var(--radius-lg)] border border-slate-200 bg-white lg:col-span-2" aria-label="متقاضیان اخیر">
+        <section data-tour="dashboard-recent" className="overflow-hidden rounded-[var(--radius-lg)] border border-slate-200 bg-white lg:col-span-2" aria-label="متقاضیان اخیر">
           <div className="flex items-center justify-between border-b border-slate-100 p-5">
             <SectionHeader title="متقاضیان اخیراً ثبت‌شده" hint="آخرین پرونده‌های ورودی" inline />
             <Link href="/applicants" className="flex items-center gap-1 text-xs font-medium text-teal-700 hover:text-teal-900">
@@ -208,7 +208,7 @@ export default async function DashboardPage() {
         </section>
 
         {/* Open vacancies */}
-        <section className="rounded-[var(--radius-lg)] border border-slate-200 bg-white p-5" aria-label="موقعیت‌های استخدامی فعال">
+        <section data-tour="dashboard-open-vacancies" className="rounded-[var(--radius-lg)] border border-slate-200 bg-white p-5" aria-label="موقعیت‌های استخدامی فعال">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <SectionHeader title="موقعیت‌های استخدامی فعال" hint="آخرین ردیف‌های باز" inline />
             <Link href="/vacancies" className="text-xs font-medium text-teal-700 hover:text-teal-900">
