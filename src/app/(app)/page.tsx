@@ -56,7 +56,11 @@ export default async function DashboardPage() {
             <p className="mt-1 text-xs text-slate-500">هنگام تایپ، متقاضیان مرتبط بر اساس نام، شناسه، تخصص، مهارت و سابقه کاری نمایش داده می‌شوند.</p>
           </div>
           <div className="w-full sm:max-w-xl sm:flex-1">
-            <ApplicantLiveSearch />
+            <ApplicantLiveSearch
+              placeholder={user.role === 'ADMIN'
+                ? 'نام، شناسه، تخصص، مهارت، سابقه کاری یا کد ملی…'
+                : 'نام، شناسه، تخصص، مهارت یا سابقه کاری…'}
+            />
           </div>
         </div>
       </section>
