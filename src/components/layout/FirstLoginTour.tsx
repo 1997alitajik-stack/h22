@@ -222,11 +222,21 @@ export function FirstLoginTour({
     const wantsMobileMenu = window.matchMedia('(max-width: 1023px)').matches && isNavStep;
     onMobileNavChange(wantsMobileMenu);
 
+    let hasScrolledTarget = false;
     const measure = () => {
-      setViewport({ width: window.innerWidth, height: window.innerHeight });
+      const nextViewport = { width: window.innerWidth, height: window.innerHeight };
+      setViewport(nextViewport);
+      const isCompact = window.matchMedia('(max-width: 639px)').matches;
       const target = visibleTarget(current.target);
       if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        if (!hasScrolledTarget) {
+          hasScrolledTarget = true;
+          target.scrollIntoView({
+            behavior: isCompact ? 'auto' : 'smooth',
+            block: isCompact ? 'start' : 'nearest',
+            inline: 'nearest',
+          });
+        }
         const rect = target.getBoundingClientRect();
         setSpotlight({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
       } else {
@@ -236,11 +246,13 @@ export function FirstLoginTour({
       const width = Math.min(420, Math.max(280, window.innerWidth - 24));
       const cardHeight = cardRef.current?.getBoundingClientRect().height ?? 340;
       const rect = target?.getBoundingClientRect();
-      let top = rect
-        ? rect.bottom + cardHeight + 26 <= window.innerHeight
-          ? rect.bottom + 18
-          : rect.top - cardHeight - 18
-        : (window.innerHeight - cardHeight) / 2;
+      let top = isCompact
+        ? window.innerHeight - cardHeight - 12
+        : rect
+          ? rect.bottom + cardHeight + 26 <= window.innerHeight
+            ? rect.bottom + 18
+            : rect.top - cardHeight - 18
+          : (window.innerHeight - cardHeight) / 2;
       top = clamp(top, 12, Math.max(12, window.innerHeight - cardHeight - 12));
       const left = rect
         ? clamp(rect.left + rect.width / 2 - width / 2, 12, Math.max(12, window.innerWidth - width - 12))
@@ -356,7 +368,7 @@ export function FirstLoginTour({
             aria-modal="true"
             aria-labelledby="rasta-tour-title"
             aria-describedby="rasta-tour-description"
-            className="rasta-tour-card fixed max-h-[calc(100dvh-24px)] overflow-y-auto rounded-2xl border border-white/15 bg-slate-950 text-white shadow-2xl"
+            className={`rasta-tour-card fixed ${viewport.width < 640 ? 'max-h-[52dvh]' : 'max-h-[calc(100dvh-24px)]'} overflow-y-auto rounded-2xl border border-white/15 bg-slate-950 text-white shadow-2xl`}
             style={{ top: cardPosition.top, left: cardPosition.left, width: cardPosition.width }}
           >
             <div className="relative overflow-hidden border-b border-white/10 bg-gradient-to-br from-teal-900/90 via-slate-900 to-indigo-950 px-5 pb-5 pt-4 sm:px-6">

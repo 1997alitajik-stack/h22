@@ -148,6 +148,9 @@ body {
 
 
 /* Guided first-login walkthrough: blurred veil, clear spotlight, and a floating glassy card. */
+[data-tour] {
+  scroll-margin-top: 5rem;
+}
 .rasta-tour-mask {
   position: fixed;
   z-index: 10000;
