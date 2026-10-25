@@ -11,9 +11,9 @@ import {
   Search,
   SlidersHorizontal,
   UserPlus,
-  X,
 } from 'lucide-react';
 import { PriorityBadge, RecruitmentStatusBadge } from '@/components/ui/Badges';
+import { ApplicantLiveSearch } from '@/components/applicants/ApplicantLiveSearch';
 import { Button, CompletenessMeter, EmptyState, inputClass, selectClass } from '@/components/ui/Primitives';
 import { DEGREE_LABELS, PRIORITY_LABELS, RECRUITMENT_STATUS_LABELS } from '@/lib/domain/labels';
 import { toPersianDigits } from '@/lib/persian';
@@ -136,27 +136,13 @@ export function ApplicantDirectory({ user, result, filters, cities, categories }
       {/* Search + filters */}
       <div className="space-y-3 rounded-[var(--radius-lg)] border border-slate-200 bg-white p-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          <div className="relative flex-1">
-            <input
-              type="search"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="جستجو: نام، شناسه، تخصص، مهارت، کارفرمای پیشین…"
-              aria-label="جستجوی متقاضیان"
-              className={`${inputClass} pr-10`}
-            />
-            <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
-            {searchInput && (
-              <button
-                type="button"
-                onClick={() => setSearchInput('')}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                aria-label="پاک کردن جستجو"
-              >
-                <X className="h-3.5 w-3.5" aria-hidden />
-              </button>
-            )}
-          </div>
+          <ApplicantLiveSearch
+            value={searchInput}
+            onChange={setSearchInput}
+            onSubmit={(query) => pushParams({ q: query || null, page: null })}
+            placeholder="جستجو: نام، شناسه، تخصص، مهارت، کارفرمای پیشین…"
+            className="relative min-w-0 flex-1"
+          />
           <Button
             variant={showFilters || activeFilterCount > 0 ? 'secondary' : 'secondary'}
             onClick={() => setShowFilters((v) => !v)}

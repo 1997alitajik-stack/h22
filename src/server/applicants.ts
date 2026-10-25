@@ -17,9 +17,89 @@ const LIST_COLUMNS = `
   group_priority, group_priority_reason, recruitment_status, completeness, created_at
 `;
 
-/** Strips characters that would break a PostgREST `or()` filter expression. */
+/** Normalize and neutralize LIKE wildcards before sending a term to PostgREST. */
 function sanitizeSearchTerm(q: string): string {
-  return q.replace(/[,*()."']/g, ' ').trim();
+  return normalizePersianText(q)
+    .replace(/[,*()."'\\%_:]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+type ApplicantSearchMatches = {
+  ids: string[];
+  directIds: string[];
+  employmentIds: string[];
+  skillIds: string[];
+};
+
+/**
+ * Search each table independently. PostgREST cannot filter through an unrelated
+ * table name in .or() unless that table is embedded in the select, which made
+ * the previous search crash the entire applicants page as soon as q was set.
+ */
+async function findApplicantSearchMatches(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  query: string,
+  perSourceLimit = 1000,
+): Promise<ApplicantSearchMatches> {
+  const pattern = '%' + query + '%';
+  const [applicantsResult, employmentResult, skillsResult] = await Promise.all([
+    supabase
+      .from('applicants')
+      .select('id')
+      .ilike('search_norm', pattern)
+      .order('created_at', { ascending: false })
+      .limit(perSourceLimit),
+    supabase
+      .from('employment_records')
+      .select('applicant_id')
+      .ilike('search_norm', pattern)
+      .order('created_at', { ascending: false })
+      .limit(perSourceLimit),
+    supabase
+      .from('applicant_skills')
+      .select('applicant_id')
+      .ilike('name_norm', pattern)
+      .order('created_at', { ascending: false })
+      .limit(perSourceLimit),
+  ]);
+
+  if (applicantsResult.error) throw new Error('جستجو در مشخصات متقاضیان ناموفق بود: ' + applicantsResult.error.message);
+  if (employmentResult.error) throw new Error('جستجو در سوابق کاری ناموفق بود: ' + employmentResult.error.message);
+  if (skillsResult.error) throw new Error('جستجو در مهارت‌ها ناموفق بود: ' + skillsResult.error.message);
+
+  const directIds = (applicantsResult.data ?? []).map((row) => row.id);
+  const employmentIds = (employmentResult.data ?? []).map((row) => row.applicant_id);
+  const skillIds = (skillsResult.data ?? []).map((row) => row.applicant_id);
+  const ids = [...new Set([...directIds, ...employmentIds, ...skillIds])];
+
+  return { ids, directIds, employmentIds, skillIds };
+}
+
+/** Small, role-safe suggestions for the live autocomplete control. */
+export async function searchApplicantSuggestions(query: string, limit = 8): Promise<ApplicantListRow[]> {
+  const normalized = sanitizeSearchTerm(query);
+  if (normalized.length < 2) return [];
+
+  const supabase = await createSupabaseServerClient();
+  const matches = await findApplicantSearchMatches(supabase, normalized, Math.max(30, limit * 4));
+  if (matches.ids.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('applicants')
+    .select(LIST_COLUMNS)
+    .in('id', matches.ids)
+    .limit(matches.ids.length);
+  if (error) throw new Error('بازیابی پیشنهادهای جستجو ناموفق بود: ' + error.message);
+
+  const byId = new Map<string, ApplicantListRow>();
+  for (const row of (data ?? []) as ApplicantListRow[]) byId.set(row.id, row);
+
+  const orderedIds = [...new Set([...matches.directIds, ...matches.employmentIds, ...matches.skillIds])];
+  return orderedIds
+    .map((id) => byId.get(id))
+    .filter((row): row is ApplicantListRow => row !== undefined)
+    .slice(0, Math.max(1, Math.min(20, limit)));
 }
 
 /**
@@ -37,16 +117,17 @@ export async function listApplicants(
 
   let query = supabase.from('applicants').select(LIST_COLUMNS, { count: 'exact' });
 
-  const q = sanitizeSearchTerm(filters.q ?? '');
-  if (q) {
-    const nq = normalizePersianText(q);
-    query = query.or(
-      [
-        `search_norm.ilike.%${nq}%`,
-        `employment_records.search_norm.ilike.%${nq}%`,
-        `applicant_skills.name_norm.ilike.%${nq}%`,
-      ].join(','),
-    );
+  const rawQuery = filters.q ?? '';
+  const q = sanitizeSearchTerm(rawQuery);
+  if (rawQuery.trim()) {
+    if (!q) {
+      return { rows: [], total: 0, page, pageSize, totalPages: 0 };
+    }
+    const matches = await findApplicantSearchMatches(supabase, q);
+    if (matches.ids.length === 0) {
+      return { rows: [], total: 0, page, pageSize, totalPages: 0 };
+    }
+    query = query.in('id', matches.ids);
   }
 
   if (filters.city) query = query.eq('residential_city', filters.city);
