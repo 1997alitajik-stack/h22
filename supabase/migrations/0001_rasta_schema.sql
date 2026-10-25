@@ -817,24 +817,51 @@ returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $$
+as $
 declare
   v_applicant uuid;
-  v_row record;
+  v_current integer;
+  v_expected integer;
 begin
-  v_row := coalesce(new, old);
-  v_applicant := v_row.applicant_id;
-  if v_applicant is null and tg_table_name = 'applicants' then
-    v_applicant := v_row.id;
+  -- applicants stores its own key as id; child tables use applicant_id.
+  -- Branch on the table before touching either record's fields, because PL/pgSQL
+  -- records only expose columns belonging to their triggering table.
+  if tg_table_name = 'applicants' then
+    if tg_op = 'DELETE' then
+      v_applicant := old.id;
+    else
+      v_applicant := new.id;
+    end if;
+  else
+    if tg_op = 'DELETE' then
+      v_applicant := old.applicant_id;
+    else
+      v_applicant := new.applicant_id;
+    end if;
   end if;
-  if v_applicant is not null then
-    update public.applicants
-       set completeness = rasta.applicant_completeness(v_applicant)
-     where id = v_applicant;
+
+  if v_applicant is null then
+    return null;
   end if;
+
+  v_expected := rasta.applicant_completeness(v_applicant);
+
+  select a.completeness
+    into v_current
+    from public.applicants as a
+   where a.id = v_applicant;
+
+  -- This guard is essential: updating completeness fires the applicants trigger
+  -- too. A conditional UPDATE lets that nested trigger stop once values match.
+  if found and v_current is distinct from v_expected then
+    update public.applicants as a
+       set completeness = v_expected
+     where a.id = v_applicant;
+  end if;
+
   return null;
 end;
-$$;
+$;
 
 create trigger completeness_applicants   after insert or update on public.applicants          for each row execute function rasta.refresh_completeness();
 create trigger completeness_sensitive    after insert or update on public.applicant_sensitive for each row execute function rasta.refresh_completeness();
