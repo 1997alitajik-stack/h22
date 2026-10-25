@@ -120,3 +120,103 @@ export async function listAuditEvents(
   if (error) throw new Error(error.message);
   return data ?? [];
 }
+
+export async function updateOrganization(
+  user: SessionUser,
+  input: { organizationId: string; nameFa: string; code: string; field?: string; city?: string; status: 'ACTIVE' | 'INACTIVE' },
+): Promise<void> {
+  if (user.role !== 'ADMIN') throw new Error('FORBIDDEN');
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('organizations')
+    .update({
+      name_fa: input.nameFa,
+      code: input.code,
+      field: input.field || null,
+      city: input.city || null,
+      status: input.status,
+    })
+    .eq('id', input.organizationId)
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.code === '23505' ? 'کد سازمانی واردشده قبلاً استفاده شده است.' : `ویرایش شرکت ناموفق بود: ${error.message}`);
+  }
+  if (!data) throw new Error('شرکت موردنظر پیدا نشد.');
+}
+
+export async function deleteOrganization(user: SessionUser, organizationId: string): Promise<void> {
+  if (user.role !== 'ADMIN') throw new Error('FORBIDDEN');
+  const supabase = await createSupabaseServerClient();
+
+  const [
+    { count: projectCount, error: projectError },
+    { count: employmentCount, error: employmentError },
+    { count: vacancyCount, error: vacancyError },
+  ] = await Promise.all([
+    supabase.from('projects').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
+    supabase.from('employment_records').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
+    supabase.from('vacancies').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
+  ]);
+
+  const queryError = projectError || employmentError || vacancyError;
+  if (queryError) throw new Error(`بررسی ارتباطات شرکت ناموفق بود: ${queryError.message}`);
+  if ((projectCount ?? 0) > 0 || (employmentCount ?? 0) > 0 || (vacancyCount ?? 0) > 0) {
+    throw new Error('این شرکت هنوز در پروژه‌ها، سوابق کاری یا فرصت‌های شغلی استفاده شده است. برای حفظ سوابق تاریخی، ابتدا آن را غیرفعال کنید و فقط شرکت بدون وابستگی را حذف کنید.');
+  }
+
+  const { data, error } = await supabase
+    .from('organizations')
+    .delete()
+    .eq('id', organizationId)
+    .select('id')
+    .maybeSingle();
+  if (error) throw new Error(`حذف شرکت ناموفق بود: ${error.message}`);
+  if (!data) throw new Error('شرکت موردنظر پیدا نشد.');
+}
+
+export async function createProject(
+  user: SessionUser,
+  input: { organizationId: string; name: string; city?: string; status: 'ACTIVE' | 'COMPLETED' | 'PLANNING' },
+): Promise<void> {
+  if (user.role !== 'ADMIN') throw new Error('FORBIDDEN');
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from('projects').insert({
+    organization_id: input.organizationId,
+    name: input.name,
+    city: input.city || null,
+    status: input.status,
+  });
+  if (error) throw new Error(`ثبت پروژه ناموفق بود: ${error.message}`);
+}
+
+export async function updateProject(
+  user: SessionUser,
+  input: { projectId: string; name: string; city?: string; status: 'ACTIVE' | 'COMPLETED' | 'PLANNING' },
+): Promise<void> {
+  if (user.role !== 'ADMIN') throw new Error('FORBIDDEN');
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('projects')
+    .update({ name: input.name, city: input.city || null, status: input.status })
+    .eq('id', input.projectId)
+    .select('id')
+    .maybeSingle();
+  if (error) throw new Error(`ویرایش پروژه ناموفق بود: ${error.message}`);
+  if (!data) throw new Error('پروژه موردنظر پیدا نشد.');
+}
+
+export async function deleteProject(user: SessionUser, projectId: string): Promise<void> {
+  if (user.role !== 'ADMIN') throw new Error('FORBIDDEN');
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('projects')
+    .delete()
+    .eq('id', projectId)
+    .select('id')
+    .maybeSingle();
+  if (error) throw new Error(`حذف پروژه ناموفق بود: ${error.message}`);
+  if (!data) throw new Error('پروژه موردنظر پیدا نشد.');
+}
+
