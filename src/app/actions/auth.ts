@@ -124,6 +124,7 @@ export async function setupAction(_prev: ActionState, formData: FormData): Promi
     return { ok: false, error: 'ارتقای نقش مدیر ناموفق بود؛ عملیات لغو شد.' };
   }
 
+  const supabase = await createSupabaseServerClient();
   await supabase.auth.signInWithPassword({
     email,
     password: parsed.data.password,
