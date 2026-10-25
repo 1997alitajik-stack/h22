@@ -30,6 +30,7 @@ export default async function EditApplicantPage({
       mode="edit"
       applicantId={applicant.id}
       applicantCode={applicant.public_code}
+      initialPhotoUrl={applicant.photo_url}
       cities={vocab.cities}
       categories={vocab.job_categories}
       organizations={organizations.filter((o) => o.status === 'ACTIVE').map((o) => ({ id: o.id, name: o.name_fa }))}
