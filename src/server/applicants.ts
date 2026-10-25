@@ -42,7 +42,7 @@ async function findApplicantSearchMatches(
   query: string,
   perSourceLimit = 1000,
 ): Promise<ApplicantSearchMatches> {
-  const pattern = \`%\${query}%\`;
+  const pattern = '%' + query + '%';
   const [applicantsResult, employmentResult, skillsResult] = await Promise.all([
     supabase
       .from('applicants')
@@ -64,9 +64,9 @@ async function findApplicantSearchMatches(
       .limit(perSourceLimit),
   ]);
 
-  if (applicantsResult.error) throw new Error(\`جستجو در مشخصات متقاضیان ناموفق بود: \${applicantsResult.error.message}\`);
-  if (employmentResult.error) throw new Error(\`جستجو در سوابق کاری ناموفق بود: \${employmentResult.error.message}\`);
-  if (skillsResult.error) throw new Error(\`جستجو در مهارت‌ها ناموفق بود: \${skillsResult.error.message}\`);
+  if (applicantsResult.error) throw new Error('جستجو در مشخصات متقاضیان ناموفق بود: ' + applicantsResult.error.message);
+  if (employmentResult.error) throw new Error('جستجو در سوابق کاری ناموفق بود: ' + employmentResult.error.message);
+  if (skillsResult.error) throw new Error('جستجو در مهارت‌ها ناموفق بود: ' + skillsResult.error.message);
 
   const directIds = (applicantsResult.data ?? []).map((row) => row.id);
   const employmentIds = (employmentResult.data ?? []).map((row) => row.applicant_id);
@@ -90,7 +90,7 @@ export async function searchApplicantSuggestions(query: string, limit = 8): Prom
     .select(LIST_COLUMNS)
     .in('id', matches.ids)
     .limit(matches.ids.length);
-  if (error) throw new Error(\`بازیابی پیشنهادهای جستجو ناموفق بود: \${error.message}\`);
+  if (error) throw new Error('بازیابی پیشنهادهای جستجو ناموفق بود: ' + error.message);
 
   const byId = new Map<string, ApplicantListRow>();
   for (const row of (data ?? []) as ApplicantListRow[]) byId.set(row.id, row);
