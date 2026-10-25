@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { KeyRound, Plus } from 'lucide-react';
+import { KeyRound, Plus, Pencil, Trash2 } from 'lucide-react';
 import {
   createUserAction,
   resetPasswordAction,
   updateUserRoleAction,
   updateUserStatusAction,
+  updateUserAccountAction,
+  deleteUserAction,
 } from '@/app/actions/admin';
 import { Modal, ConfirmDialog } from '@/components/ui/Modal';
 import { Button, Field, inputClass, selectClass } from '@/components/ui/Primitives';
@@ -39,11 +41,15 @@ export function UserManagementTable({
   const [createOpen, setCreateOpen] = useState(false);
   const [resetTarget, setResetTarget] = useState<Row | null>(null);
   const [statusTarget, setStatusTarget] = useState<Row | null>(null);
+  const [editTarget, setEditTarget] = useState<Row | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
 
   const [createState, , createPending, createSubmitAndWait] = useServerAction(createUserAction, initial);
   const [resetState, resetFormAction, resetPending] = useServerAction(resetPasswordAction, initial);
   const [roleState, , rolePending, roleSubmitAndWait] = useServerAction(updateUserRoleAction, initial);
   const [statusState, , statusPending, statusSubmitAndWait] = useServerAction(updateUserStatusAction, initial);
+  const [editState, , editPending, editSubmitAndWait] = useServerAction(updateUserAccountAction, initial);
+  const [deleteState, , deletePending, deleteSubmitAndWait] = useServerAction(deleteUserAction, initial);
 
   async function handleCreateAction(formData: FormData) {
     const result = await createSubmitAndWait(formData);
@@ -66,6 +72,25 @@ export function UserManagementTable({
     }
   }
 
+  async function handleEditAction(formData: FormData) {
+    const result = await editSubmitAndWait(formData);
+    if (result.ok) {
+      setEditTarget(null);
+      router.refresh();
+    }
+  }
+
+  async function handleDeleteAction() {
+    if (!deleteTarget) return;
+    const formData = new FormData();
+    formData.set('userId', deleteTarget.id);
+    const result = await deleteSubmitAndWait(formData);
+    if (result.ok) {
+      setDeleteTarget(null);
+      router.refresh();
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -75,14 +100,14 @@ export function UserManagementTable({
         </Button>
       </div>
 
-      {(roleState.error || statusState.error) && (
+      {(roleState.error || statusState.error || editState.error || deleteState.error) && (
         <p role="alert" className="rounded-[var(--radius-md)] border border-rose-200 bg-[var(--color-status-danger-bg)] p-3 text-xs font-medium text-rose-700">
-          {roleState.error || statusState.error}
+          {roleState.error || statusState.error || editState.error || deleteState.error}
         </p>
       )}
-      {(roleState.message || statusState.message) && (
+      {(roleState.message || statusState.message || editState.message || deleteState.message) && (
         <p role="status" className="rounded-[var(--radius-md)] border border-emerald-200 bg-[var(--color-status-success-bg)] p-3 text-xs font-medium text-emerald-800">
-          {roleState.message || statusState.message}
+          {roleState.message || statusState.message || editState.message || deleteState.message}
         </p>
       )}
       <div className="overflow-hidden rounded-[var(--radius-lg)] border border-slate-200 bg-white">
@@ -143,6 +168,15 @@ export function UserManagementTable({
                     <div className="flex items-center justify-end gap-1.5">
                       <button
                         type="button"
+                        onClick={() => setEditTarget(u)}
+                        className="rounded-[var(--radius-md)] p-1.5 text-slate-400 transition-soft hover:bg-teal-50 hover:text-teal-800"
+                        aria-label={`ویرایش مشخصات ${u.fullName}`}
+                        title="ویرایش مشخصات"
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setResetTarget(u)}
                         className="rounded-[var(--radius-md)] p-1.5 text-slate-400 transition-soft hover:bg-slate-100 hover:text-teal-800"
                         aria-label={`تغییر کلمه عبور ${u.fullName}`}
@@ -150,6 +184,17 @@ export function UserManagementTable({
                       >
                         <KeyRound className="h-4 w-4" aria-hidden />
                       </button>
+                      {u.id !== currentUserId && (
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(u)}
+                          className="rounded-[var(--radius-md)] p-1.5 text-slate-400 transition-soft hover:bg-rose-50 hover:text-rose-700"
+                          aria-label={`حذف حساب ${u.fullName}`}
+                          title="حذف کامل حساب"
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden />
+                        </button>
+                      )}
                       {u.id !== currentUserId && (
                         <Button
                           variant={u.status === 'ACTIVE' ? 'ghost' : 'secondary'}
@@ -215,6 +260,41 @@ export function UserManagementTable({
         </Modal>
       )}
 
+      {/* Edit user modal */}
+      {editTarget && (
+        <Modal open onClose={() => setEditTarget(null)} title={`ویرایش حساب کاربری — ${editTarget.fullName}`}>
+          <form action={handleEditAction} className="space-y-4 text-xs">
+            <input type="hidden" name="userId" value={editTarget.id} />
+            {editState.error && (
+              <p role="alert" className="rounded-[var(--radius-md)] border border-rose-200 bg-[var(--color-status-danger-bg)] p-3 font-medium text-rose-700">
+                {editState.error}
+              </p>
+            )}
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+              <Field label="نام و نام خانوادگی" htmlFor="edit-user-name" required>
+                <input id="edit-user-name" name="fullName" required maxLength={120} defaultValue={editTarget.fullName} className={inputClass} />
+              </Field>
+              <Field label="نشانی ایمیل ورود" htmlFor="edit-user-email" required>
+                <input id="edit-user-email" name="email" type="email" dir="ltr" required maxLength={254} defaultValue={editTarget.email} className={`${inputClass} dir-ltr font-mono`} />
+              </Field>
+              <Field label="نام کاربری" htmlFor="edit-user-username" hint="خالی بماند اگر نیاز نیست؛ لاتین و بدون فاصله">
+                <input id="edit-user-username" name="username" dir="ltr" maxLength={60} defaultValue={editTarget.username ?? ''} className={`${inputClass} dir-ltr font-mono`} />
+              </Field>
+              <Field label="بخش سازمانی" htmlFor="edit-user-department">
+                <input id="edit-user-department" name="department" maxLength={200} defaultValue={editTarget.department ?? ''} className={inputClass} />
+              </Field>
+            </div>
+            <p className="rounded-[var(--radius-md)] bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-500">
+              نقش دسترسی و فعال/غیرفعال بودن حساب از کنترل‌های جدول تغییر می‌کنند. تغییر ایمیل توسط مدیر روی حساب ورود نیز اعمال می‌شود.
+            </p>
+            <div className="flex items-center justify-start gap-3 border-t border-slate-100 pt-4">
+              <Button type="submit" loading={editPending}>ذخیره مشخصات</Button>
+              <Button type="button" variant="ghost" onClick={() => setEditTarget(null)}>انصراف</Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       {/* Password reset modal */}
       {resetTarget && (
         <Modal open onClose={() => setResetTarget(null)} title={`تغییر کلمه عبور — ${resetTarget.fullName}`}>
@@ -245,6 +325,15 @@ export function UserManagementTable({
         </Modal>
       )}
 
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="حذف کامل حساب کاربری"
+        message={`حساب «${deleteTarget?.fullName ?? ''}» به‌طور کامل از سامانه ورود حذف می‌شود. امکان حذف حساب خودتان یا آخرین مدیر فعال وجود ندارد. این کار قابل بازگشت نیست.`}
+        confirmLabel={deletePending ? 'در حال حذف…' : 'حذف کامل حساب'}
+        variant="danger"
+        onConfirm={() => void handleDeleteAction()}
+        onCancel={() => setDeleteTarget(null)}
+      />
       <ConfirmDialog
         open={statusTarget !== null}
         title="تغییر وضعیت حساب کاربری"
