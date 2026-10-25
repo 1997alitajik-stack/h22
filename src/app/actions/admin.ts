@@ -23,7 +23,6 @@ import {
   updateUserStatus,
 } from '@/server/users';
 import { createOrganization, updateVocabulary } from '@/server/misc';
-import { seedDemoApplicants } from '@/server/demo-applicants';
 import type { VacancyListRow } from '@/types';
 
 export interface SimpleActionState {
@@ -294,43 +293,3 @@ export async function updateVocabularyAction(
     return { ok: false, error: err instanceof Error ? err.message : 'خطا در به‌روزرسانی واژگان' };
   }
 }
-
-/** Explicit, administrator-only creation of 50 clearly marked synthetic applicants. */
-export async function seedDemoApplicantsAction(
-  _prev: SimpleActionState,
-  _formData: FormData,
-): Promise<SimpleActionState> {
-  const user = await requireAdmin('/applicants');
-
-  try {
-    const result = await seedDemoApplicants(user);
-    if (result.alreadyExists) {
-      return { ok: true, message: '۵۰ پرونده آزمایشی از قبل در بانک متقاضیان وجود دارد؛ رکورد تکراری ایجاد نشد.' };
-    }
-
-    try {
-      await adminAudit(user, 'APPLICANT', 'ایجاد ۵۰ پرونده آزمایشی راستا', {
-        recordIdentifier: 'DEMO-RASTA-001…050',
-        details: 'اطلاعات ساختگی برای ارزیابی نمایش فهرست، جستجو، فیلترها و صفحه پرونده؛ بدون اطلاعات هویتی واقعی.',
-        severity: 'MEDIUM',
-      });
-    } catch (auditError) {
-      console.error('[RASTA_DEMO_SEED] Audit event could not be written', auditError);
-    }
-
-    revalidatePath('/');
-    revalidatePath('/applicants');
-    revalidatePath('/reports');
-    return {
-      ok: true,
-      message: '۵۰ پرونده ساختگی با سوابق کاری، تحصیلی و مهارت‌ها به بانک متقاضیان اضافه شد. شناسه‌هایشان با DEMO-RASTA شروع می‌شود.',
-    };
-  } catch (error) {
-    console.error('[RASTA_DEMO_SEED] Demo applicant seeding failed', error);
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : 'ایجاد پرونده‌های آزمایشی ناموفق بود.',
-    };
-  }
-}
-
