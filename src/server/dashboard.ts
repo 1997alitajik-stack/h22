@@ -44,7 +44,7 @@ export async function getDashboardMetrics(user: SessionUser): Promise<DashboardM
       .select('id', { count: 'exact', head: true })
       .gte('created_at', startOfCurrentJalaliMonth()),
     supabase.from('applicants').select('group_priority'),
-    supabase.from('applicants').select('id', { count: 'exact', head: true }).lt('completeness', 70),
+    supabase.from('applicants').select('id', { count: 'exact', head: true }).lt('completeness', 70).throwOnError(),
     supabase.from('vacancies').select('id', { count: 'exact', head: true }).eq('status', 'OPEN'),
     supabase.from('applicants').select('primary_job_category'),
     supabase.from('applicants').select('residential_city'),
