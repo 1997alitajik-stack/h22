@@ -36,7 +36,7 @@ export default async function ApplicantProfilePage({
             <div
               role={applicant.photo_url ? 'img' : 'presentation'}
               aria-label={applicant.photo_url ? `تصویر ${applicant.full_name}` : undefined}
-              className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 bg-cover bg-center text-slate-400 sm:h-24 sm:w-24"
+              className="flex aspect-[3/4] w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 bg-cover bg-center text-slate-400 sm:w-24"
               style={applicant.photo_url ? { backgroundImage: `url(${JSON.stringify(applicant.photo_url)})` } : undefined}
             >
               {!applicant.photo_url && <UserRound className="h-8 w-8" aria-hidden />}
