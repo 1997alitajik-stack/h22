@@ -69,6 +69,34 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+
+
+/* Consistent pointer affordance for every semantically interactive control. */
+a[href],
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+[role="option"]:not([aria-disabled="true"]),
+[role="menuitem"]:not([aria-disabled="true"]),
+[role="tab"]:not([aria-disabled="true"]),
+[role="switch"]:not([aria-disabled="true"]),
+[aria-haspopup]:not([aria-disabled="true"]),
+summary,
+select:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled),
+input[type="file"]:not(:disabled),
+label[for],
+label:has(input[type="file"]:not(:disabled)) {
+  cursor: pointer;
+}
+
+button:disabled,
+select:disabled,
+input:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 /* Focus visibility everywhere */
 :focus-visible {
   outline: 2px solid var(--color-accent);
