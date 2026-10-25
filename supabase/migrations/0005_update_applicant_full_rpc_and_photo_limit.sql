@@ -118,7 +118,7 @@ begin
          set employer_name = pg_catalog.btrim(v_item ->> 'employerName'),
              is_group_entity = coalesce(nullif(v_item ->> 'isGroupEntity', '')::boolean, false),
              group_entity_type = coalesce(nullif(v_item ->> 'groupEntityType', '')::public.group_entity_type, 'EXTERNAL'::public.group_entity_type),
-             organization_id = nullif(v_item ->> 'organizationId', '')::uuid,
+             organization_id = coalesce(nullif(v_item ->> 'organizationId', '')::uuid, organization_id),
              project_name = nullif(pg_catalog.btrim(v_item ->> 'projectName'), ''),
              city = nullif(pg_catalog.btrim(v_item ->> 'city'), ''),
              job_title = pg_catalog.btrim(v_item ->> 'jobTitle'),
