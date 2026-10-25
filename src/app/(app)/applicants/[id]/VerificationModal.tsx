@@ -42,6 +42,10 @@ export function VerificationModal({ recordId, initialStatus, initialNotes, onClo
           </div>
         )}
 
+        <div className="rounded-[var(--radius-md)] border border-teal-100 bg-teal-50/60 p-3 text-[11px] leading-6 text-teal-950">
+          <p className="font-bold">این وضعیت چه اثری دارد؟</p>
+          <p>«تأیید رسمی» فقط زمانی انتخاب شود که سند یا پاسخ کارگزینی بررسی شده باشد. «در حال استعلام» یعنی نتیجه هنوز قطعی نیست. «رد سابقه» همراه با دلیل ثبت می‌شود و به‌عنوان سابقهٔ تأییدشده در اولویت سازمانی اثر ندارد.</p>
+        </div>
         <Field label="نتیجه بررسی استعلام کارگزینی" htmlFor="status" required>
           <select id="status" name="status" defaultValue={validInitial} className={selectClass}>
             <option value="VERIFIED">تأیید رسمی سابقه همکاری در گروه (اعطای اولویت)</option>
