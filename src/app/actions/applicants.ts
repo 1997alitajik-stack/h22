@@ -15,11 +15,67 @@ export interface ApplicantActionState {
   error?: string;
   fieldErrors?: Record<string, string>;
   applicantId?: string;
+  warning?: string;
 }
 
 export interface ActionState {
   ok: boolean;
   error?: string;
+}
+
+async function saveApplicantPhoto(
+  user: Awaited<ReturnType<typeof requireAdmin>>,
+  applicantId: string,
+  formData: FormData,
+): Promise<void> {
+  const selectedFile = formData.get('photo');
+  const file = selectedFile instanceof File && selectedFile.size > 0 ? selectedFile : null;
+  const removeRequested = formData.get('removePhoto') === 'true';
+  const supabase = await createSupabaseServerClient();
+
+  if (file) {
+    const uploaded = await uploadApplicantDocument(user, applicantId, file, {
+      category: 'ID_PHOTO',
+      title: 'تصویر پروفایل متقاضی',
+      isPrimaryResume: false,
+      notes: 'تصویر نمایه پرونده',
+    });
+
+    const { data: oldPhotos, error: oldPhotosError } = await supabase
+      .from('attachments')
+      .select('id')
+      .eq('applicant_id', applicantId)
+      .eq('category', 'ID_PHOTO')
+      .neq('id', uploaded.attachmentId);
+    if (oldPhotosError) {
+      console.error('[RASTA_APPLICANT_PHOTO] New image saved but old image lookup failed', {
+        applicantId,
+        message: oldPhotosError.message,
+      });
+      return;
+    }
+    for (const old of oldPhotos ?? []) {
+      try {
+        await deleteApplicantDocument(user, old.id);
+      } catch (error) {
+        console.error('[RASTA_APPLICANT_PHOTO] New image saved but old image cleanup failed', {
+          attachmentId: old.id,
+          message: error instanceof Error ? error.message : 'unknown',
+        });
+      }
+    }
+    return;
+  }
+
+  if (removeRequested) {
+    const { data: oldPhotos, error } = await supabase
+      .from('attachments')
+      .select('id')
+      .eq('applicant_id', applicantId)
+      .eq('category', 'ID_PHOTO');
+    if (error) throw new Error(`خواندن تصویر قبلی ناموفق بود: ${error.message}`);
+    for (const old of oldPhotos ?? []) await deleteApplicantDocument(user, old.id);
+  }
 }
 
 function toPayload(values: ApplicantFormValues, highest?: { degree: DegreeLevel; title: string; field: string }): Record<string, unknown> {
@@ -126,6 +182,17 @@ export async function createApplicantAction(
     return { ok: false, error: `ثبت متقاضی ناموفق بود: ${error?.message ?? 'خطای نامشخص'}` };
   }
 
+  let photoWarning: string | undefined;
+  try {
+    await saveApplicantPhoto(user, String(newId), formData);
+  } catch (photoError) {
+    photoWarning = photoError instanceof Error ? photoError.message : 'بارگذاری تصویر ناموفق بود.';
+    console.error('[RASTA_APPLICANT_PHOTO] Applicant created but photo upload failed', {
+      applicantId: String(newId),
+      message: photoWarning,
+    });
+  }
+
   await adminAudit(user, 'APPLICANT', `ایجاد پرونده جدید برای ${values.firstName} ${values.lastName}`, {
     recordIdentifier: String(newId),
     severity: 'MEDIUM',
@@ -133,7 +200,7 @@ export async function createApplicantAction(
 
   revalidatePath('/applicants');
   revalidatePath('/');
-  return { ok: true, applicantId: String(newId) };
+  return { ok: true, applicantId: String(newId), warning: photoWarning };
 }
 
 export async function updateApplicantAction(
@@ -182,6 +249,17 @@ export async function updateApplicantAction(
     return { ok: false, error: `ذخیره تغییرات ناموفق بود: ${error.message}` };
   }
 
+  let photoWarning: string | undefined;
+  try {
+    await saveApplicantPhoto(user, applicantId, formData);
+  } catch (photoError) {
+    photoWarning = photoError instanceof Error ? photoError.message : 'به‌روزرسانی تصویر ناموفق بود.';
+    console.error('[RASTA_APPLICANT_PHOTO] Applicant updated but photo upload failed', {
+      applicantId,
+      message: photoWarning,
+    });
+  }
+
   await adminAudit(user, 'APPLICANT', `ویرایش اطلاعات متقاضی ${values.firstName} ${values.lastName}`, {
     recordIdentifier: applicantId,
     severity: 'MEDIUM',
@@ -189,7 +267,7 @@ export async function updateApplicantAction(
 
   revalidatePath('/applicants');
   revalidatePath(`/applicants/${applicantId}`);
-  return { ok: true, applicantId };
+  return { ok: true, applicantId, warning: photoWarning };
 }
 
 export async function updateRecruitmentStatusAction(applicantId: string, status: string): Promise<void> {

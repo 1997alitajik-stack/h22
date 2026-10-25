@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Save, Trash2, X } from 'lucide-react';
+import { ImagePlus, Plus, Save, Trash2, UserRound, X } from 'lucide-react';
 import { createApplicantAction, updateApplicantAction, type ApplicantActionState } from '@/app/actions/applicants';
 import { Button, Field, inputClass, selectClass } from '@/components/ui/Primitives';
 import { ConfirmDialog } from '@/components/ui/Modal';
@@ -73,6 +73,7 @@ interface Props {
   categories: string[];
   organizations: { id: string; name: string }[];
   initial?: ApplicantFormInitial;
+  initialPhotoUrl?: string | null;
 }
 
 const STEPS = [
@@ -116,7 +117,7 @@ const emptyEducation = (): FormEducation => ({
  * payload is validated with the shared Zod schema before submission, then
  * persisted through a single transactional RPC.
  */
-export function ApplicantForm({ mode, applicantId, applicantCode, cities, categories, organizations, initial }: Props) {
+export function ApplicantForm({ mode, applicantId, applicantCode, cities, categories, organizations, initial, initialPhotoUrl }: Props) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -124,6 +125,35 @@ export function ApplicantForm({ mode, applicantId, applicantCode, cities, catego
   const [submitting, setSubmitting] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(initialPhotoUrl ?? null);
+  const [removePhoto, setRemovePhoto] = useState(false);
+
+  function handlePhotoSelected(file: File | null) {
+    if (!file) return;
+    if (!['image/jpeg', 'image/png'].includes(file.type) || !/\.(jpe?g|png)$/i.test(file.name)) {
+      setFormError('برای تصویر پروفایل فقط فایل JPG یا PNG قابل قبول است.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setFormError('حجم تصویر باید کمتر از ۱۰ مگابایت باشد.');
+      return;
+    }
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview);
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+    setRemovePhoto(false);
+    setFormError('');
+    setDirty(true);
+  }
+
+  function clearPhoto() {
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview);
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    setRemovePhoto(mode === 'edit' && Boolean(initialPhotoUrl));
+    setDirty(true);
+  }
 
   const [values, setValues] = useState<ApplicantFormInitial>(
     initial ?? {
@@ -227,6 +257,8 @@ export function ApplicantForm({ mode, applicantId, applicantCode, cities, catego
     const fd = new FormData();
     fd.set('payload', JSON.stringify(parsed.data));
     if (mode === 'edit' && applicantId) fd.set('applicantId', applicantId);
+    if (photoFile) fd.set('photo', photoFile);
+    if (removePhoto) fd.set('removePhoto', 'true');
 
     const action = mode === 'edit' ? updateApplicantAction : createApplicantAction;
     const result: ApplicantActionState = await action({ ok: false }, fd);
@@ -239,6 +271,7 @@ export function ApplicantForm({ mode, applicantId, applicantCode, cities, catego
       return;
     }
 
+    if (result.warning) window.alert(`پرونده ذخیره شد، اما تصویر کامل ذخیره نشد: ${result.warning}`);
     router.push(`/applicants/${result.applicantId}`);
   }
 
@@ -310,6 +343,38 @@ export function ApplicantForm({ mode, applicantId, applicantCode, cities, catego
       <div className="rounded-[var(--radius-lg)] border border-slate-200 bg-white p-5 sm:p-6">
         {step === 1 && (
           <div className="grid grid-cols-1 gap-4 text-xs sm:grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-dashed border-slate-300 bg-slate-50 p-4 sm:col-span-2 lg:col-span-3 sm:flex-row sm:items-center">
+              <div
+                role={photoPreview ? 'img' : 'presentation'}
+                aria-label={photoPreview ? 'پیش‌نمایش تصویر متقاضی' : undefined}
+                className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white bg-cover bg-center text-slate-400"
+                style={photoPreview ? { backgroundImage: `url(${JSON.stringify(photoPreview)})` } : undefined}
+              >
+                {!photoPreview && <UserRound className="h-9 w-9" aria-hidden />}
+              </div>
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="text-xs font-bold text-slate-800">تصویر پروفایل متقاضی</p>
+                <p className="text-[11px] leading-5 text-slate-500">تصویر پرسنلی JPG یا PNG، حداکثر ۱۰ مگابایت. تصویر انتخاب‌شده پیش از ذخیره قابل مشاهده است و پس از ثبت نیز در پرونده نمایش داده می‌شود.</p>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-md)] border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 transition-soft hover:border-teal-300 hover:bg-teal-50">
+                    <ImagePlus className="h-3.5 w-3.5 text-teal-700" aria-hidden />
+                    {photoPreview ? 'تغییر تصویر' : 'بارگذاری تصویر'}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+                      className="sr-only"
+                      onChange={(event) => handlePhotoSelected(event.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                  {photoPreview && (
+                    <Button type="button" variant="ghost" className="px-3 py-2 text-[11px] text-rose-700" onClick={clearPhoto}>
+                      حذف تصویر
+                    </Button>
+                  )}
+                  {photoFile && <span className="max-w-56 truncate text-[10px] text-slate-500">{photoFile.name}</span>}
+                </div>
+              </div>
+            </div>
             <Field label="نام" htmlFor="firstName" required error={errorFor('firstName')}>
               <input id="firstName" className={inputClass} value={values.firstName} onChange={(e) => set('firstName', e.target.value)} maxLength={80} />
             </Field>

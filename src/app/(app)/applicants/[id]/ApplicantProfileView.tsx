@@ -43,6 +43,26 @@ export function ApplicantProfileView({ user, applicant }: { user: SessionUser; a
 
   const employmentTab = (
     <div className="space-y-4">
+      <section className="space-y-3 rounded-[var(--radius-lg)] border border-teal-200 bg-teal-50/60 p-4" aria-label="راهنمای روند استعلام سوابق">
+        <h3 className="text-xs font-bold text-teal-950">روند بررسی و استعلام سابقه به چه صورت است؟</h3>
+        <ol className="grid grid-cols-1 gap-3 text-[11px] leading-6 text-teal-950 sm:grid-cols-3">
+          <li className="rounded-[var(--radius-md)] border border-teal-100 bg-white/80 p-3">
+            <span className="mb-1 block font-bold">۱. ثبت سابقه</span>
+            مدیر پرونده، نام کارفرما، سمت، بازهٔ زمانی و مستندات را ثبت می‌کند. اگر سابقه مربوط به ستاد یا شرکت تابعه است، نوع همکاری سازمانی باید درست انتخاب شود.
+          </li>
+          <li className="rounded-[var(--radius-md)] border border-teal-100 bg-white/80 p-3">
+            <span className="mb-1 block font-bold">۲. استعلام و بررسی</span>
+            در نبود مدرک کافی، وضعیت «در حال استعلام» بماند. کارشناس می‌تواند شماره نامه، سوابق بیمه یا توضیح پیگیری را در یادداشت استعلام ثبت کند.
+          </li>
+          <li className="rounded-[var(--radius-md)] border border-teal-100 bg-white/80 p-3">
+            <span className="mb-1 block font-bold">۳. ثبت نتیجه</span>
+            مدیر از «بررسی و تأیید سابقه» نتیجه را روی تأییدشده، در انتظار یا ردشده می‌گذارد. برای رد سابقه، نوشتن دلیل الزامی است.
+          </li>
+        </ol>
+        <p className="text-[11px] leading-6 text-teal-900">
+          <strong>اولویت سازمانی خودکار محاسبه می‌شود:</strong> سابقهٔ تأییدشده در ستاد اولویت اول و سابقهٔ تأییدشده در شرکت تابعه اولویت دوم دارد. وضعیت در انتظار هنوز اولویت تأییدشده نمی‌گیرد؛ سابقهٔ ردشده نیز به‌عنوان سابقهٔ تأییدشده شمرده نمی‌شود. این امتیاز جایگزین تصمیم استخدامی نهایی نیست.
+        </p>
+      </section>
       {applicant.employment.length === 0 ? (
         <EmptyState icon={<Briefcase className="h-5 w-5" aria-hidden />} title="هیچ سابقه کاری ثبت نشده است" />
       ) : (

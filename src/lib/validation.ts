@@ -203,6 +203,33 @@ export const organizationSchema = z.object({
   isSubsidiary: z.boolean().default(true),
 });
 
+export const organizationUpdateSchema = organizationSchema.extend({
+  organizationId: z.string().uuid(),
+  status: z.enum(['ACTIVE', 'INACTIVE']),
+});
+
+export const deleteOrganizationSchema = z.object({
+  organizationId: z.string().uuid(),
+});
+
+export const createProjectSchema = z.object({
+  organizationId: z.string().uuid(),
+  name: z.string().trim().min(2, 'نام پروژه الزامی است').max(200),
+  city: z.string().trim().max(80).optional(),
+  status: z.enum(['ACTIVE', 'COMPLETED', 'PLANNING']).default('ACTIVE'),
+});
+
+export const updateProjectSchema = z.object({
+  projectId: z.string().uuid(),
+  name: z.string().trim().min(2, 'نام پروژه الزامی است').max(200),
+  city: z.string().trim().max(80).optional(),
+  status: z.enum(['ACTIVE', 'COMPLETED', 'PLANNING']),
+});
+
+export const deleteProjectSchema = z.object({
+  projectId: z.string().uuid(),
+});
+
 export const vocabUpdateSchema = z.object({
   key: z.enum(['cities', 'job_categories']),
   action: z.enum(['add', 'remove']),
@@ -236,6 +263,22 @@ export const createUserSchema = z.object({
 export const resetPasswordSchema = z.object({
   userId: z.string().uuid(),
   newPassword: z.string().min(10, 'کلمه عبور حداقل ۱۰ نویسه').max(128),
+});
+
+export const userAccountUpdateSchema = z.object({
+  userId: z.string().uuid(),
+  email: z.string().trim().toLowerCase().email('نشانی ایمیل معتبر نیست').max(254),
+  fullName: z.string().trim().min(2, 'نام کامل الزامی است').max(120),
+  username: z.string().trim().toLowerCase().transform((v) => v || undefined)
+    .refine((v) => v === undefined || /^[a-z0-9._-]{3,60}$/.test(v), 'نام کاربری فقط حروف لاتین، رقم، نقطه و خط تیره'),
+  department: z.string().trim().max(200).transform((v) => v || undefined),
+});
+
+export const ownProfileUpdateSchema = z.object({
+  fullName: z.string().trim().min(2, 'نام کامل الزامی است').max(120),
+  username: z.string().trim().toLowerCase().transform((v) => v || undefined)
+    .refine((v) => v === undefined || /^[a-z0-9._-]{3,60}$/.test(v), 'نام کاربری فقط حروف لاتین، رقم، نقطه و خط تیره'),
+  department: z.string().trim().max(200).transform((v) => v || undefined),
 });
 
 export const loginSchema = z.object({

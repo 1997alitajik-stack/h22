@@ -155,6 +155,7 @@ export function FirstLoginTour({
   const [cardPosition, setCardPosition] = useState({ top: 18, left: 18, width: 390 });
 
   const storageKey = `rasta:onboarding:v2:${userId}`;
+  const disableAutoKey = `rasta:onboarding:disable-auto:v1:${userId}`;
   const steps = useMemo(() => ALL_STEPS.filter((step) => isAdmin || !step.adminOnly), [isAdmin]);
   const current = steps[Math.min(stepIndex, steps.length - 1)] ?? steps[0];
 
@@ -169,6 +170,19 @@ export function FirstLoginTour({
     onMobileNavChange(false);
     setSpotlight(null);
   }, [onMobileNavChange, storageKey]);
+
+  const disableAutoShow = useCallback(() => {
+    try {
+      window.localStorage.setItem(disableAutoKey, 'true');
+      window.localStorage.setItem(storageKey, 'complete');
+    } catch {
+      // Continue closing even when persistent storage is blocked.
+    }
+    setIsOpen(false);
+    setStartWhenHome(false);
+    onMobileNavChange(false);
+    setSpotlight(null);
+  }, [disableAutoKey, onMobileNavChange, storageKey]);
 
   const start = useCallback(() => {
     if (pathname !== '/') {
@@ -191,7 +205,8 @@ export function FirstLoginTour({
     };
 
     try {
-      if (window.localStorage.getItem(storageKey) !== 'complete') scheduleStart();
+      const autoDisabled = window.localStorage.getItem(disableAutoKey) === 'true';
+      if (!autoDisabled && window.localStorage.getItem(storageKey) !== 'complete') scheduleStart();
     } catch {
       // If storage is blocked, show the first-use tour for this page visit.
       scheduleStart();
@@ -200,7 +215,7 @@ export function FirstLoginTour({
     return () => {
       if (frame) window.cancelAnimationFrame(frame);
     };
-  }, [pathname, storageKey]);
+  }, [pathname, storageKey, disableAutoKey]);
 
   useEffect(() => {
     if (!startWhenHome || pathname !== '/') return;
@@ -452,6 +467,16 @@ export function FirstLoginTour({
                 <span>مرحلهٔ {stepIndex + 1} از {steps.length}</span>
                 <button type="button" onClick={finish} className="font-semibold text-slate-400 underline-offset-4 hover:text-teal-200 hover:underline">
                   رد کردن راهنما
+                </button>
+              </div>
+
+              <div className="flex justify-start">
+                <button
+                  type="button"
+                  onClick={disableAutoShow}
+                  className="text-[11px] font-semibold text-teal-200 underline-offset-4 transition hover:text-white hover:underline"
+                >
+                  دیگر راهنما به‌صورت خودکار نمایش داده نشود
                 </button>
               </div>
 

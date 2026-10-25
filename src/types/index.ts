@@ -239,6 +239,7 @@ export interface ApplicantDetail {
   /** Masked server-side; null when the underlying value is absent. */
   national_id_masked: string | null;
   phone_masked: string | null;
+  photo_url: string | null;
   employment: EmploymentRow[];
   education: EducationRow[];
   certificates: CertificateRow[];

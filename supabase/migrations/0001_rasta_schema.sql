@@ -358,6 +358,7 @@ create table public.attachments (
   version_number    int,
   notes             text,
   uploaded_by       uuid references public.profiles (id) on delete set null,
+  uploader_name     text,
   uploaded_at       timestamptz not null default now(),
   constraint attachments_version_positive check (version_number is null or version_number >= 1)
 );
