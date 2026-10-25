@@ -238,6 +238,22 @@ export const resetPasswordSchema = z.object({
   newPassword: z.string().min(10, 'کلمه عبور حداقل ۱۰ نویسه').max(128),
 });
 
+export const userAccountUpdateSchema = z.object({
+  userId: z.string().uuid(),
+  email: z.string().trim().toLowerCase().email('نشانی ایمیل معتبر نیست').max(254),
+  fullName: z.string().trim().min(2, 'نام کامل الزامی است').max(120),
+  username: z.string().trim().toLowerCase().transform((v) => v || undefined)
+    .refine((v) => v === undefined || /^[a-z0-9._-]{3,60}$/.test(v), 'نام کاربری فقط حروف لاتین، رقم، نقطه و خط تیره'),
+  department: z.string().trim().max(200).transform((v) => v || undefined),
+});
+
+export const ownProfileUpdateSchema = z.object({
+  fullName: z.string().trim().min(2, 'نام کامل الزامی است').max(120),
+  username: z.string().trim().toLowerCase().transform((v) => v || undefined)
+    .refine((v) => v === undefined || /^[a-z0-9._-]{3,60}$/.test(v), 'نام کاربری فقط حروف لاتین، رقم، نقطه و خط تیره'),
+  department: z.string().trim().max(200).transform((v) => v || undefined),
+});
+
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().min(1, 'نشانی ایمیل الزامی است'),
   password: z.string().min(1, 'کلمه عبور الزامی است'),
