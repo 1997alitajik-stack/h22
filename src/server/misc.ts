@@ -9,10 +9,12 @@ import type {
 
 export async function listOrganizations(user: SessionUser): Promise<OrganizationRow[]> {
   const supabase = await createSupabaseServerClient();
-  const [{ data: orgs }, { data: projects }] = await Promise.all([
+  const [{ data: orgs, error: orgsError }, { data: projects, error: projectsError }] = await Promise.all([
     supabase.from('organizations').select('*').order('name_fa'),
     supabase.from('projects').select('id, organization_id, name, city, status'),
   ]);
+  if (orgsError) throw new Error(`بارگذاری ساختار سازمانی ناموفق بود: ${orgsError.message}`);
+  if (projectsError) throw new Error(`بارگذاری پروژه‌های سازمانی ناموفق بود: ${projectsError.message}`);
 
   const byOrg = new Map<string, OrganizationRow['projects']>();
   for (const p of projects ?? []) {
@@ -53,7 +55,8 @@ export async function createOrganization(
 
 export async function getVocabularies(user: SessionUser): Promise<Vocabularies> {
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.from('vocabularies').select('key, values').in('key', ['cities', 'job_categories']);
+  const { data, error } = await supabase.from('vocabularies').select('key, values').in('key', ['cities', 'job_categories']);
+  if (error) throw new Error(`بارگذاری اطلاعات پایه ناموفق بود: ${error.message}`);
   const map = new Map((data ?? []).map((row) => [row.key, row.values as string[]]));
   return {
     cities: map.get('cities') ?? [],
@@ -70,8 +73,9 @@ export async function updateVocabulary(
   if (user.role !== 'ADMIN') throw new Error('FORBIDDEN');
   const supabase = await createSupabaseServerClient();
 
-  const { data: row } = await supabase.from('vocabularies').select('values').eq('key', key).single();
-  const current = ((row?.values as string[] | undefined) ?? []).slice();
+  const { data: row, error: readError } = await supabase.from('vocabularies').select('values').eq('key', key).single();
+  if (readError || !row) throw new Error(`خواندن اطلاعات پایه ناموفق بود: ${readError?.message ?? 'رکورد یافت نشد'}`);
+  const current = (row.values as string[]).slice();
   const next = action === 'add'
     ? current.includes(value) ? current : [...current, value]
     : current.filter((v) => v !== value);

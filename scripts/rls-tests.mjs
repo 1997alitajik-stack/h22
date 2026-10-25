@@ -6,17 +6,18 @@
  * and asserts actual allow/deny behavior — not rule simulations.
  *
  * Required env (read from .env.local when present):
- *   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
- *   SUPABASE_SERVICE_ROLE_KEY
- * Optional:
- *   RLS_ADMIN_EMAIL / RLS_ADMIN_PASSWORD     (default: rasta-admin-test@rasta-test.ir / Rasta#Admin!2026)
- *   RLS_VIEWER_EMAIL / RLS_VIEWER_PASSWORD   (default: rasta-viewer-test@rasta-test.ir / Rasta#Viewer!2026)
+ *   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or legacy ANON_KEY),
+ *   SUPABASE_SERVICE_ROLE_KEY, RASTA_ALLOW_DESTRUCTIVE_RLS_TESTS=true,
+ *   RLS_TEST_PROJECT_REF matching the exact Supabase project ref,
+ *   RLS_ADMIN_EMAIL / RLS_ADMIN_PASSWORD and RLS_VIEWER_EMAIL / RLS_VIEWER_PASSWORD.
  *
- * The script provisions its own users and cleans up after itself.
+ * WARNING: This provisions test accounts, creates a synthetic applicant and writes
+ * audit rows. Use only an isolated test project, never production.
  * Usage: npm run test:rls
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
+import { URL as URLConstructor } from 'node:url';
 
 // --- load .env.local if present ---------------------------------------------
 if (existsSync('.env.local')) {
@@ -27,22 +28,42 @@ if (existsSync('.env.local')) {
 }
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const ANON = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+if (process.env.RASTA_ALLOW_DESTRUCTIVE_RLS_TESTS !== 'true') {
+  console.error('✖ Refusing to run. Set RASTA_ALLOW_DESTRUCTIVE_RLS_TESTS=true only for an isolated test project.');
+  process.exit(2);
+}
 if (!URL || !ANON || !SERVICE) {
-  console.error('✖ Missing Supabase env vars. Copy .env.example to .env.local and fill values.');
+  console.error('✖ Missing Supabase env vars. Use credentials for a separate test project.');
+  process.exit(2);
+}
+
+let actualProjectRef = '';
+try {
+  actualProjectRef = new URLConstructor(URL).hostname.split('.')[0];
+} catch {
+  console.error('✖ NEXT_PUBLIC_SUPABASE_URL is not a valid URL.');
+  process.exit(2);
+}
+if (!process.env.RLS_TEST_PROJECT_REF || process.env.RLS_TEST_PROJECT_REF !== actualProjectRef) {
+  console.error('✖ RLS_TEST_PROJECT_REF must exactly match the project ref in NEXT_PUBLIC_SUPABASE_URL.');
   process.exit(2);
 }
 
 const ADMIN = {
-  email: process.env.RLS_ADMIN_EMAIL ?? 'rasta-admin-test@rasta-test.ir',
-  password: process.env.RLS_ADMIN_PASSWORD ?? 'Rasta#Admin!2026',
+  email: process.env.RLS_ADMIN_EMAIL,
+  password: process.env.RLS_ADMIN_PASSWORD,
 };
 const VIEWER = {
-  email: process.env.RLS_VIEWER_EMAIL ?? 'rasta-viewer-test@rasta-test.ir',
-  password: process.env.RLS_VIEWER_PASSWORD ?? 'Rasta#Viewer!2026',
+  email: process.env.RLS_VIEWER_EMAIL,
+  password: process.env.RLS_VIEWER_PASSWORD,
 };
+if (!ADMIN.email || !ADMIN.password || !VIEWER.email || !VIEWER.password || ADMIN.email === VIEWER.email) {
+  console.error('✖ Set separate RLS_ADMIN_* and RLS_VIEWER_* test credentials; defaults are disabled.');
+  process.exit(2);
+}
 
 const service = createClient(URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
 

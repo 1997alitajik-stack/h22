@@ -118,3 +118,30 @@ body {
   transition-duration: var(--duration-fast);
   transition-timing-function: var(--ease-out-soft);
 }
+
+
+/* Spin the supplied RASTA emblem/lockup around its central Y axis. */
+.rasta-logo-full-stage {
+  aspect-ratio: 160 / 198;
+  perspective: 700px;
+  transform: translateZ(0);
+}
+.rasta-logo-mark-stage {
+  perspective: 700px;
+}
+.rasta-logo-rotor {
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+  backface-visibility: visible;
+  animation: rasta-logo-central-spin 9s linear infinite;
+}
+@keyframes rasta-logo-central-spin {
+  from { transform: perspective(700px) rotateY(0deg); }
+  to { transform: perspective(700px) rotateY(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rasta-logo-rotor {
+    animation: none !important;
+    transform: none !important;
+  }
+}

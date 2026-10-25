@@ -77,11 +77,20 @@ export async function setupAction(_prev: ActionState, formData: FormData): Promi
     return { ok: false, error: 'توکن راه‌اندازی نامعتبر است.' };
   }
 
-  const supabase = await createSupabaseServerClient();
-  const { count: adminCount } = await supabase
+  // Check the one-time bootstrap lock with service-role access. An anonymous
+  // RLS query cannot reliably see existing administrator profiles.
+  const admin = createSupabaseAdminClient();
+  const { count: adminCount, error: adminCheckError } = await admin
     .from('profiles')
     .select('id', { count: 'exact', head: true })
     .eq('role', 'ADMIN');
+  if (adminCheckError) {
+    console.error('[RASTA_SETUP] Unable to verify bootstrap state', {
+      code: adminCheckError.code,
+      message: adminCheckError.message,
+    });
+    return { ok: false, error: 'بررسی وضعیت راه‌اندازی ناموفق بود؛ تنظیمات دیتابیس را بررسی کنید.' };
+  }
   if ((adminCount ?? 0) > 0) {
     return { ok: false, error: 'مدیر سامانه از قبل تعریف شده است؛ این صفحه غیرفعال است.' };
   }
@@ -91,7 +100,6 @@ export async function setupAction(_prev: ActionState, formData: FormData): Promi
     return { ok: false, error: 'نشانی ایمیل معتبر نیست.' };
   }
 
-  const admin = createSupabaseAdminClient();
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email,
     password: parsed.data.password,
@@ -116,6 +124,7 @@ export async function setupAction(_prev: ActionState, formData: FormData): Promi
     return { ok: false, error: 'ارتقای نقش مدیر ناموفق بود؛ عملیات لغو شد.' };
   }
 
+  const supabase = await createSupabaseServerClient();
   await supabase.auth.signInWithPassword({
     email,
     password: parsed.data.password,

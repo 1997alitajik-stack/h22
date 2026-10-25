@@ -52,9 +52,11 @@ npm run dev                 # http://localhost:3000
 npm run typecheck    # بررسی تایپ strict
 npm run lint         # ESLint (بدون هشدار)
 npm run test         # ۵۶ تست واحد (منطق دامنه، اعتبارسنجی، CSV، نرمال‌سازی فارسی)
-npm run test:rls     # ۲۴ سناریوی RLS/مجوزدهی روی پروژه واقعی Supabase
+npm run test:rls     # تست RLS فقط روی Supabase آزمایشی ایزوله، با opt-in صریح
 npm run test:e2e     # Playwright: دسکتاپ + موبایل (نیازمند حساب‌های E2E در .env.local)
 ```
+
+**هشدار تست RLS:** این اسکریپت در Supabase حساب آزمایشی ایجاد می‌کند، یک متقاضی مصنوعی ثبت می‌کند و رویدادهای حسابرسی می‌نویسد. فقط روی پروژهٔ آزمایشی جدا از Production اجرا شود. مقدار `RASTA_ALLOW_DESTRUCTIVE_RLS_TESTS=true`، مقدار دقیق `RLS_TEST_PROJECT_REF` و چهار متغیر ایمیل/رمز `RLS_ADMIN_*` و `RLS_VIEWER_*` الزامی‌اند؛ حساب و رمز پیش‌فرض وجود ندارد.
 
 برای E2E این متغیرها را نیز تنظیم کنید:
 `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`, `E2E_VIEWER_EMAIL`, `E2E_VIEWER_PASSWORD`

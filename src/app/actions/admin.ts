@@ -188,7 +188,7 @@ export async function resetPasswordAction(
       recordIdentifier: parsed.data.userId,
       severity: 'HIGH',
     });
-    return { ok: true, message: 'کلمه عبور تغییر کرد و نشست‌های فعال حساب خاتمه یافت.' };
+    return { ok: true, message: 'کلمه عبور تغییر کرد. نشست‌های باز ممکن است تا پایان اعتبار توکن فعال بمانند.' };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'خطا در تغییر کلمه عبور' };
   }

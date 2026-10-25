@@ -15,21 +15,22 @@ export async function listVacancies(
 ): Promise<VacancyListRow[]> {
   const supabase = await createSupabaseServerClient();
 
-  const { data: vacancies, count } = await supabase
+  const { data: vacancies, error: vacanciesError } = await supabase
     .from('vacancies')
     .select(`${BASE_COLUMNS}, candidacies(count)`, { count: 'exact' })
     .order('opened_at', { ascending: false });
+  if (vacanciesError) throw new Error(`بارگذاری فرصت‌های شغلی ناموفق بود: ${vacanciesError.message}`);
   if (!vacancies) return [];
-  void count;
 
   // Candidacy stage counts per vacancy (single grouped query, no N+1).
-  const { data: stageCounts } = await supabase
+  const { data: stageCounts, error: stageCountsError } = await supabase
     .from('candidacies')
     .select('vacancy_id, stage')
     .in(
       'vacancy_id',
       vacancies.map((v) => v.id),
     );
+  if (stageCountsError) throw new Error(`بارگذاری مراحل جذب ناموفق بود: ${stageCountsError.message}`);
 
   const counts = new Map<string, { total: number; shortlisted: number }>();
   for (const row of stageCounts ?? []) {
@@ -63,16 +64,17 @@ export async function getVacancyDetail(
 ): Promise<VacancyDetail | null> {
   const supabase = await createSupabaseServerClient();
 
-  const { data: vacancy } = await supabase
+  const { data: vacancy, error: vacancyError } = await supabase
     .from('vacancies')
     .select(
       `${BASE_COLUMNS}, required_degree, preferred_skills, description, responsibilities, salary_range`,
     )
     .eq('id', id)
-    .single();
+    .maybeSingle();
+  if (vacancyError) throw new Error(`بارگذاری فرصت شغلی ناموفق بود: ${vacancyError.message}`);
   if (!vacancy) return null;
 
-  const { data: candidacies } = await supabase
+  const { data: candidacies, error: candidaciesError } = await supabase
     .from('candidacies')
     .select(
       `id, applicant_id, stage, notes, match_score, match_breakdown, applied_at,
@@ -80,6 +82,7 @@ export async function getVacancyDetail(
     )
     .eq('vacancy_id', id)
     .order('applied_at', { ascending: false });
+  if (candidaciesError) throw new Error(`بارگذاری داوطلبان فرصت ناموفق بود: ${candidaciesError.message}`);
 
   const rows =
     candidacies?.map((c) => {
@@ -192,7 +195,7 @@ export async function linkCandidacy(
 ): Promise<void> {
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: vacancy }, { data: applicant }] = await Promise.all([
+  const [{ data: vacancy, error: vacancyError }, { data: applicant, error: applicantError }] = await Promise.all([
     supabase
       .from('vacancies')
       .select('city, min_years_experience, required_skills, title')
@@ -204,12 +207,15 @@ export async function linkCandidacy(
       .eq('id', applicantId)
       .single(),
   ]);
+  if (vacancyError) throw new Error(`بازیابی فرصت شغلی ناموفق بود: ${vacancyError.message}`);
+  if (applicantError) throw new Error(`بازیابی پرونده متقاضی ناموفق بود: ${applicantError.message}`);
   if (!vacancy || !applicant) throw new Error('متقاضی یا فرصت شغلی یافت نشد');
 
-  const { data: skills } = await supabase
+  const { data: skills, error: skillsError } = await supabase
     .from('applicant_skills')
     .select('name')
     .eq('applicant_id', applicantId);
+  if (skillsError) throw new Error(`بازیابی مهارت‌های متقاضی ناموفق بود: ${skillsError.message}`);
 
   const breakdown = computeMatchScore(
     {

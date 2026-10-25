@@ -13,12 +13,14 @@ const initial: { ok: boolean; error?: string; message?: string } = { ok: false }
 export function CreateOrganizationDialog() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useServerAction(createOrganizationAction, initial);
+  const [state, , pending, submitAndWait] = useServerAction(createOrganizationAction, initial);
 
-  function handleAction(formData: FormData) {
-    formAction(formData);
-    setOpen(false);
-    router.refresh();
+  async function handleAction(formData: FormData) {
+    const result = await submitAndWait(formData);
+    if (result.ok) {
+      setOpen(false);
+      router.refresh();
+    }
   }
 
   return (
