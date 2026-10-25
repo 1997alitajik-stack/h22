@@ -5,6 +5,7 @@ import { toPersianDigits } from '@/lib/persian';
 import { PriorityBadge, RecruitmentStatusBadge } from '@/components/ui/Badges';
 import { RECRUITMENT_STATUS_LABELS } from '@/lib/domain/labels';
 import { BrandMark } from '@/components/layout/BrandMark';
+import { ApplicantLiveSearch } from '@/components/applicants/ApplicantLiveSearch';
 import {
   ArrowLeft,
   Building2,
@@ -45,6 +46,19 @@ export default async function DashboardPage() {
           مشاهده بانک متقاضیان
           <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
         </Link>
+      </section>
+
+      {/* Quick live applicant search */}
+      <section className="rounded-[var(--radius-lg)] border border-slate-200 bg-white p-4 sm:p-5" aria-label="جستجوی سریع متقاضیان">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold text-slate-900">جستجوی سریع متقاضی</h2>
+            <p className="mt-1 text-xs text-slate-500">هنگام تایپ، متقاضیان مرتبط بر اساس نام، شناسه، تخصص، مهارت و سابقه کاری نمایش داده می‌شوند.</p>
+          </div>
+          <div className="w-full sm:max-w-xl sm:flex-1">
+            <ApplicantLiveSearch />
+          </div>
+        </div>
       </section>
 
       {/* KPI cards */}
