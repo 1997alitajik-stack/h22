@@ -5,13 +5,13 @@ import { searchApplicantSuggestions } from '@/server/applicants';
 /** GET /api/applicants/search?q=... — live applicant suggestions for signed-in users. */
 export async function GET(request: Request) {
   try {
-    await requireUserApi();
+    const user = await requireUserApi();
     const query = new URL(request.url).searchParams.get('q') ?? '';
     if (query.trim().length < 2) {
       return NextResponse.json({ results: [] }, { headers: { 'Cache-Control': 'no-store' } });
     }
 
-    const results = await searchApplicantSuggestions(query, 8);
+    const results = await searchApplicantSuggestions(query, 8, user.role === 'ADMIN');
     return NextResponse.json({ results }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     if (error instanceof AuthzError) {
