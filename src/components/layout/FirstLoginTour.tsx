@@ -154,7 +154,7 @@ export function FirstLoginTour({
   const [viewport, setViewport] = useState<Viewport>({ width: 1280, height: 800 });
   const [cardPosition, setCardPosition] = useState({ top: 18, left: 18, width: 390 });
 
-  const storageKey = `rasta:onboarding:v3:${userId}`;
+  const storageKey = `rasta:onboarding:v2:${userId}`;
   const disableAutoKey = `rasta:onboarding:disable-auto:v1:${userId}`;
   const steps = useMemo(() => ALL_STEPS.filter((step) => isAdmin || !step.adminOnly), [isAdmin]);
   const current = steps[Math.min(stepIndex, steps.length - 1)] ?? steps[0];
