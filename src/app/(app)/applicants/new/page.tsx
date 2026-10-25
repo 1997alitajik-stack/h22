@@ -17,7 +17,7 @@ export default async function NewApplicantPage() {
       mode="create"
       cities={vocab.cities}
       categories={vocab.job_categories}
-      organizations={organizations.map((o) => ({ id: o.id, name: o.name_fa }))}
+      organizations={organizations.filter((o) => o.status === 'ACTIVE').map((o) => ({ id: o.id, name: o.name_fa }))}
     />
   );
 }
