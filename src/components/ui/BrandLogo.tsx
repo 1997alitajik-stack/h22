@@ -8,7 +8,53 @@ export interface BrandLogoProps {
   className?: string;
 }
 
-/** Official HERA artwork. The full asset already contains its Persian lettering. */
+const LOGO_WIDTH = 330;
+const LOGO_HEIGHT = 419;
+
+/** Layered HERA artwork with a real CSS 3D extrusion effect while rotating. */
+function ThreeDimensionalLogo({ depth, priority = false }: { depth: number; priority?: boolean }) {
+  return (
+    <div className="rasta-logo-rotor">
+      {Array.from({ length: depth }, (_, index) => {
+        const layer = index + 1;
+        const brightness = 0.42 + (1 - index / Math.max(depth - 1, 1)) * 0.2;
+        return (
+          <span
+            key={layer}
+            aria-hidden="true"
+            className="rasta-logo-extrusion"
+            style={{
+              transform: `translateZ(-${layer}px)`,
+              filter: `brightness(${brightness.toFixed(2)}) saturate(1.18)`,
+            }}
+          />
+        );
+      })}
+
+      <Image
+        src="/rasta-logo.webp"
+        alt=""
+        width={LOGO_WIDTH}
+        height={LOGO_HEIGHT}
+        priority={priority}
+        draggable={false}
+        className="rasta-logo-face rasta-logo-front"
+        style={{ transform: 'translateZ(1px)' }}
+      />
+
+      <Image
+        src="/rasta-logo.webp"
+        alt=""
+        width={LOGO_WIDTH}
+        height={LOGO_HEIGHT}
+        draggable={false}
+        className="rasta-logo-face rasta-logo-back"
+        style={{ transform: `rotateY(180deg) translateZ(${depth + 1}px) scaleX(-1)` }}
+      />
+    </div>
+  );
+}
+
 export function BrandLogo({
   size = 'md',
   withText = false,
@@ -39,16 +85,7 @@ export function BrandLogo({
         role="img"
         aria-label="مؤسسه حرا"
       >
-        <div className="rasta-logo-rotor">
-          <Image
-            src="/rasta-logo.webp"
-            alt=""
-            width={224}
-            height={282}
-            priority={size === 'xl' || size === 'lg'}
-            className="block h-auto w-full select-none"
-          />
-        </div>
+        <ThreeDimensionalLogo depth={12} priority={size === 'xl' || size === 'lg'} />
       </div>
     );
 
@@ -63,15 +100,7 @@ export function BrandLogo({
       role="img"
       aria-label="نشان مؤسسه حرا"
     >
-      <div className="rasta-logo-rotor absolute inset-0">
-        <Image
-          src="/rasta-logo.webp"
-          alt=""
-          width={224}
-          height={282}
-          className="absolute inset-x-0 top-0 block h-auto w-full select-none object-cover object-top"
-        />
-      </div>
+      <ThreeDimensionalLogo depth={5} />
     </div>
   );
 }
