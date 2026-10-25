@@ -42,13 +42,13 @@ export default async function UsersPage() {
           id: p.id,
           email: p.email,
           fullName: p.full_name,
+          initials: initialsOf(p.full_name || p.email),
           username: p.username,
           role: p.role,
           status: p.status,
           department: p.department,
           createdAt: formatJalali(p.created_at),
         }))}
-        initialsOf={initialsOf}
       />
     </div>
   );

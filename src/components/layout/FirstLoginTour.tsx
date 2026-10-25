@@ -154,7 +154,7 @@ export function FirstLoginTour({
   const [viewport, setViewport] = useState<Viewport>({ width: 1280, height: 800 });
   const [cardPosition, setCardPosition] = useState({ top: 18, left: 18, width: 390 });
 
-  const storageKey = `rasta:onboarding:v1:${userId}`;
+  const storageKey = `rasta:onboarding:v2:${userId}`;
   const steps = useMemo(() => ALL_STEPS.filter((step) => isAdmin || !step.adminOnly), [isAdmin]);
   const current = steps[Math.min(stepIndex, steps.length - 1)] ?? steps[0];
 
@@ -243,20 +243,58 @@ export function FirstLoginTour({
         setSpotlight(null);
       }
 
-      const width = Math.min(420, Math.max(280, window.innerWidth - 24));
+      const isSidebarTarget = current.target.startsWith('nav-') || current.target === 'brand';
+      const desktopSidebarWidth = 256;
+      const mobileDrawerWidth = 288;
+      const contentWidth = window.innerWidth >= 1024
+        ? window.innerWidth - desktopSidebarWidth
+        : window.innerWidth;
+      const width = wantsMobileMenu
+        ? Math.min(272, Math.max(220, window.innerWidth - 24))
+        : Math.min(420, Math.max(240, window.innerWidth - 24));
       const cardHeight = cardRef.current?.getBoundingClientRect().height ?? 340;
       const rect = target?.getBoundingClientRect();
-      let top = isCompact
-        ? window.innerHeight - cardHeight - 12
-        : rect
-          ? rect.bottom + cardHeight + 26 <= window.innerHeight
-            ? rect.bottom + 18
-            : rect.top - cardHeight - 18
-          : (window.innerHeight - cardHeight) / 2;
-      top = clamp(top, 12, Math.max(12, window.innerHeight - cardHeight - 12));
-      const left = rect
-        ? clamp(rect.left + rect.width / 2 - width / 2, 12, Math.max(12, window.innerWidth - width - 12))
-        : (window.innerWidth - width) / 2;
+      let top = 12;
+      let left = 12;
+
+      if (wantsMobileMenu) {
+        // Keep the card inside the open right-side drawer and never on top of
+        // the menu item being explained. Place it above or below the target.
+        left = clamp(
+          window.innerWidth - mobileDrawerWidth + 8,
+          12,
+          Math.max(12, window.innerWidth - width - 12),
+        );
+        const aboveTop = rect ? rect.top - cardHeight - 14 : -1;
+        const belowTop = rect ? rect.bottom + 14 : -1;
+        const maxTop = window.innerHeight - cardHeight - 12;
+        if (aboveTop >= 12) top = aboveTop;
+        else if (belowTop >= 12 && belowTop <= maxTop) top = belowTop;
+        else top = rect && rect.top > window.innerHeight / 2
+          ? 12
+          : Math.max(12, maxTop);
+      } else {
+        // On desktop the sidebar is fixed at the right. Constrain the tour
+        // card to the content column so it cannot cover the navigation rail.
+        const maxLeft = Math.max(12, contentWidth - width - 12);
+        left = rect
+          ? clamp(rect.left + rect.width / 2 - width / 2, 12, maxLeft)
+          : clamp((contentWidth - width) / 2, 12, maxLeft);
+
+        const maxTop = Math.max(12, window.innerHeight - cardHeight - 12);
+        if (isCompact) {
+          top = maxTop;
+        } else if (isSidebarTarget) {
+          top = clamp((window.innerHeight - cardHeight) / 2, 12, maxTop);
+        } else {
+          const belowTop = rect ? rect.bottom + 18 : -1;
+          const aboveTop = rect ? rect.top - cardHeight - 18 : -1;
+          if (belowTop >= 12 && belowTop <= maxTop) top = belowTop;
+          else if (aboveTop >= 12) top = aboveTop;
+          else top = clamp((window.innerHeight - cardHeight) / 2, 12, maxTop);
+        }
+      }
+
       setCardPosition({ top, left, width });
     };
 
@@ -368,7 +406,7 @@ export function FirstLoginTour({
             aria-modal="true"
             aria-labelledby="rasta-tour-title"
             aria-describedby="rasta-tour-description"
-            className={`rasta-tour-card fixed ${viewport.width < 640 ? 'max-h-[52dvh]' : 'max-h-[calc(100dvh-24px)]'} overflow-y-auto rounded-2xl border border-white/15 bg-slate-950 text-white shadow-2xl`}
+            className={`rasta-tour-card fixed ${viewport.width < 640 ? (current.target.startsWith('nav-') ? 'max-h-[46dvh]' : 'max-h-[52dvh]') : 'max-h-[calc(100dvh-24px)]'} overflow-y-auto rounded-2xl border border-white/15 bg-slate-950 text-white shadow-2xl`}
             style={{ top: cardPosition.top, left: cardPosition.left, width: cardPosition.width }}
           >
             <div className="relative overflow-hidden border-b border-white/10 bg-gradient-to-br from-teal-900/90 via-slate-900 to-indigo-950 px-5 pb-5 pt-4 sm:px-6">

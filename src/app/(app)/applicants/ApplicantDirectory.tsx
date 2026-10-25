@@ -8,12 +8,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Database,
   Search,
   SlidersHorizontal,
   UserPlus,
   X,
 } from 'lucide-react';
 import { PriorityBadge, RecruitmentStatusBadge } from '@/components/ui/Badges';
+import { seedDemoApplicantsAction } from '@/app/actions/admin';
+import { useServerAction } from '@/lib/useServerAction';
 import { Button, CompletenessMeter, EmptyState, inputClass, selectClass } from '@/components/ui/Primitives';
 import { DEGREE_LABELS, PRIORITY_LABELS, RECRUITMENT_STATUS_LABELS } from '@/lib/domain/labels';
 import { toPersianDigits } from '@/lib/persian';
@@ -45,6 +48,19 @@ export function ApplicantDirectory({ user, result, filters, cities, categories }
   const [pending, startTransition] = useTransition();
   const [showFilters, setShowFilters] = useState(false);
   const [searchInput, setSearchInput] = useState(filters.q ?? '');
+  const [demoSeedState, , demoSeedPending, submitDemoSeed] = useServerAction(
+    seedDemoApplicantsAction,
+    { ok: false },
+  );
+
+  async function handleDemoSeed() {
+    try {
+      const result = await submitDemoSeed(new FormData());
+      if (result.ok) router.refresh();
+    } catch (error) {
+      console.error('[RASTA_DEMO_SEED] Demo data action failed in the client', error);
+    }
+  }
 
   // Debounced search push
   useEffect(() => {
@@ -132,6 +148,39 @@ export function ApplicantDirectory({ user, result, filters, cities, categories }
           )}
         </div>
       </div>
+
+      {isAdmin && (
+        <section className="space-y-2" aria-label="داده‌های آزمایشی">
+          <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-dashed border-teal-300 bg-teal-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-teal-950">آزمایش سامانه با ۵۰ رزومهٔ نمونه</p>
+              <p className="mt-1 max-w-3xl text-[11px] leading-6 text-teal-900/80">
+                اطلاعات کاملاً ساختگی با سابقهٔ کاری، تحصیلی و مهارت‌هاست؛ شناسه‌ها با DEMO-RASTA شروع می‌شوند.
+                هیچ شماره ملی، شماره تماس یا ایمیل قابل‌دسترسی ایجاد نمی‌شود. اجرای دوباره، رکورد تکراری نمی‌سازد.
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={() => void handleDemoSeed()}
+              loading={demoSeedPending}
+              className="shrink-0 border-teal-300 bg-white text-teal-900 hover:bg-teal-100"
+            >
+              <Database className="h-3.5 w-3.5" aria-hidden />
+              ایجاد ۵۰ رزومهٔ آزمایشی
+            </Button>
+          </div>
+          {demoSeedState.error && (
+            <p role="alert" className="rounded-[var(--radius-md)] border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+              {demoSeedState.error}
+            </p>
+          )}
+          {demoSeedState.message && (
+            <p role="status" className="rounded-[var(--radius-md)] border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+              {demoSeedState.message}
+            </p>
+          )}
+        </section>
+      )}
 
       {/* Search + filters */}
       <div className="space-y-3 rounded-[var(--radius-lg)] border border-slate-200 bg-white p-4">
