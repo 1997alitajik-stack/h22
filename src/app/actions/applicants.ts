@@ -10,6 +10,8 @@ import { splitList } from '@/lib/persian';
 import { uploadApplicantDocument, deleteApplicantDocument } from '@/server/documents';
 import type { DegreeLevel } from '@/types';
 
+const MAX_APPLICANT_PHOTO_BYTES = 500 * 1024;
+
 export interface ApplicantActionState {
   ok: boolean;
   error?: string;
@@ -34,6 +36,13 @@ async function saveApplicantPhoto(
   const supabase = await createSupabaseServerClient();
 
   if (file) {
+    if (file.size > MAX_APPLICANT_PHOTO_BYTES) {
+      throw new Error('حجم تصویر پروفایل نباید بیشتر از ۵۰۰ کیلوبایت باشد.');
+    }
+    if (file.type !== 'image/jpeg' || !/\.jpe?g$/i.test(file.name)) {
+      throw new Error('تصویر پروفایل باید به فرمت JPG و با نسبت ۳×۴ آماده شده باشد.');
+    }
+
     const uploaded = await uploadApplicantDocument(user, applicantId, file, {
       category: 'ID_PHOTO',
       title: 'تصویر پروفایل متقاضی',
