@@ -28,6 +28,7 @@ function sanitizeSearchTerm(q: string): string {
 type ApplicantSearchMatches = {
   ids: string[];
   directIds: string[];
+  nationalIdIds: string[];
   employmentIds: string[];
   skillIds: string[];
 };
@@ -41,9 +42,10 @@ async function findApplicantSearchMatches(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   query: string,
   perSourceLimit = 1000,
+  includeNationalId = false,
 ): Promise<ApplicantSearchMatches> {
   const pattern = '%' + query + '%';
-  const [applicantsResult, employmentResult, skillsResult] = await Promise.all([
+  const [applicantsResult, employmentResult, skillsResult, nationalIdResult] = await Promise.all([
     supabase
       .from('applicants')
       .select('id')
@@ -62,27 +64,40 @@ async function findApplicantSearchMatches(
       .ilike('name_norm', pattern)
       .order('created_at', { ascending: false })
       .limit(perSourceLimit),
+    includeNationalId
+      ? supabase
+          .from('applicant_sensitive')
+          .select('applicant_id')
+          .ilike('national_id', pattern)
+          .limit(perSourceLimit)
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (applicantsResult.error) throw new Error('جستجو در مشخصات متقاضیان ناموفق بود: ' + applicantsResult.error.message);
   if (employmentResult.error) throw new Error('جستجو در سوابق کاری ناموفق بود: ' + employmentResult.error.message);
   if (skillsResult.error) throw new Error('جستجو در مهارت‌ها ناموفق بود: ' + skillsResult.error.message);
+  if (nationalIdResult.error) throw new Error('جستجو با کد ملی ناموفق بود: ' + nationalIdResult.error.message);
 
   const directIds = (applicantsResult.data ?? []).map((row) => row.id);
+  const nationalIdIds = (nationalIdResult.data ?? []).map((row) => row.applicant_id);
   const employmentIds = (employmentResult.data ?? []).map((row) => row.applicant_id);
   const skillIds = (skillsResult.data ?? []).map((row) => row.applicant_id);
-  const ids = [...new Set([...directIds, ...employmentIds, ...skillIds])];
+  const ids = [...new Set([...directIds, ...nationalIdIds, ...employmentIds, ...skillIds])];
 
-  return { ids, directIds, employmentIds, skillIds };
+  return { ids, directIds, nationalIdIds, employmentIds, skillIds };
 }
 
 /** Small, role-safe suggestions for the live autocomplete control. */
-export async function searchApplicantSuggestions(query: string, limit = 8): Promise<ApplicantListRow[]> {
+export async function searchApplicantSuggestions(
+  query: string,
+  limit = 8,
+  includeNationalId = false,
+): Promise<ApplicantListRow[]> {
   const normalized = sanitizeSearchTerm(query);
   if (normalized.length < 2) return [];
 
   const supabase = await createSupabaseServerClient();
-  const matches = await findApplicantSearchMatches(supabase, normalized, Math.max(30, limit * 4));
+  const matches = await findApplicantSearchMatches(supabase, normalized, Math.max(30, limit * 4), includeNationalId);
   if (matches.ids.length === 0) return [];
 
   const { data, error } = await supabase
@@ -95,7 +110,7 @@ export async function searchApplicantSuggestions(query: string, limit = 8): Prom
   const byId = new Map<string, ApplicantListRow>();
   for (const row of (data ?? []) as ApplicantListRow[]) byId.set(row.id, row);
 
-  const orderedIds = [...new Set([...matches.directIds, ...matches.employmentIds, ...matches.skillIds])];
+  const orderedIds = [...new Set([...matches.directIds, ...matches.nationalIdIds, ...matches.employmentIds, ...matches.skillIds])];
   return orderedIds
     .map((id) => byId.get(id))
     .filter((row): row is ApplicantListRow => row !== undefined)
@@ -123,7 +138,7 @@ export async function listApplicants(
     if (!q) {
       return { rows: [], total: 0, page, pageSize, totalPages: 0 };
     }
-    const matches = await findApplicantSearchMatches(supabase, q);
+    const matches = await findApplicantSearchMatches(supabase, q, 1000, user.role === 'ADMIN');
     if (matches.ids.length === 0) {
       return { rows: [], total: 0, page, pageSize, totalPages: 0 };
     }
