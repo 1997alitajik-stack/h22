@@ -150,7 +150,7 @@ input:disabled,
 
 /* Spin the supplied RASTA emblem/lockup around its central Y axis. */
 .rasta-logo-full-stage {
-  aspect-ratio: 160 / 198;
+  aspect-ratio: 224 / 282;
   perspective: 700px;
   transform: translateZ(0);
 }

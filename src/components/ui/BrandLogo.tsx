@@ -8,7 +8,7 @@ export interface BrandLogoProps {
   className?: string;
 }
 
-/** Official RASTA artwork. The full asset already contains its Persian lettering. */
+/** Official HERA artwork. The full asset already contains its Persian lettering. */
 export function BrandLogo({
   size = 'md',
   withText = false,
@@ -37,14 +37,14 @@ export function BrandLogo({
       <div
         className={`rasta-logo-full-stage ${fullSize} ${theme === 'dark' ? 'drop-shadow-lg' : 'drop-shadow-sm'}`}
         role="img"
-        aria-label="موسسه ارزیابی راستا"
+        aria-label="مؤسسه حرا"
       >
         <div className="rasta-logo-rotor">
           <Image
             src="/rasta-logo.webp"
             alt=""
-            width={160}
-            height={198}
+            width={224}
+            height={282}
             priority={size === 'xl' || size === 'lg'}
             className="block h-auto w-full select-none"
           />
@@ -61,15 +61,15 @@ export function BrandLogo({
     <div
       className={`rasta-logo-mark-stage relative inline-flex shrink-0 items-center justify-center overflow-hidden ${markSize} ${className}`}
       role="img"
-      aria-label="نشان موسسه ارزیابی راستا"
+      aria-label="نشان مؤسسه حرا"
     >
       <div className="rasta-logo-rotor absolute inset-0">
         <Image
-          src="/rasta-emblem.webp"
+          src="/rasta-logo.webp"
           alt=""
-          width={160}
-          height={160}
-          className="block h-full w-full select-none object-contain"
+          width={224}
+          height={282}
+          className="absolute inset-x-0 top-0 block h-auto w-full select-none object-cover object-top"
         />
       </div>
     </div>
