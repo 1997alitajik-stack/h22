@@ -28,15 +28,19 @@ export function VocabEditor({
   placeholder: string;
 }) {
   const router = useRouter();
-  const [state, formAction, pending] = useServerAction(updateVocabularyAction, initial);
+  const [state, , pending, submitAndWait] = useServerAction(updateVocabularyAction, initial);
   const addFormRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState('');
 
-  function handleAddAction(formData: FormData) {
-    formAction(formData);
-    addFormRef.current?.reset();
+  async function handleAddAction(formData: FormData) {
     setError('');
-    router.refresh();
+    const result = await submitAndWait(formData);
+    if (result.ok) {
+      addFormRef.current?.reset();
+      router.refresh();
+    } else {
+      setError(result.error ?? 'ثبت مقدار ناموفق بود.');
+    }
   }
 
   async function remove(value: string) {

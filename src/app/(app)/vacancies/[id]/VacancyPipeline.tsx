@@ -38,17 +38,19 @@ export function VacancyPipeline({
   const isAdmin = user.role === 'ADMIN';
   const [linkOpen, setLinkOpen] = useState(false);
 
-  const [linkState, linkFormAction, linkPending] = useServerAction(linkCandidacyAction, initial);
-  function handleLinkAction(formData: FormData) {
-    linkFormAction(formData);
-    setLinkOpen(false);
-    router.refresh();
+  const [linkState, , linkPending, linkSubmitAndWait] = useServerAction(linkCandidacyAction, initial);
+  async function handleLinkAction(formData: FormData) {
+    const result = await linkSubmitAndWait(formData);
+    if (result.ok) {
+      setLinkOpen(false);
+      router.refresh();
+    }
   }
 
-  const [stageState, stageFormAction, stagePending] = useServerAction(updateStageAction, initial);
-  function handleStageAction(formData: FormData) {
-    stageFormAction(formData);
-    router.refresh();
+  const [stageState, , stagePending, stageSubmitAndWait] = useServerAction(updateStageAction, initial);
+  async function handleStageAction(formData: FormData) {
+    const result = await stageSubmitAndWait(formData);
+    if (result.ok) router.refresh();
   }
 
   return (

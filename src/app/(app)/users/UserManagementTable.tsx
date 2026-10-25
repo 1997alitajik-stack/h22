@@ -41,26 +41,30 @@ export function UserManagementTable({
   const [resetTarget, setResetTarget] = useState<Row | null>(null);
   const [statusTarget, setStatusTarget] = useState<Row | null>(null);
 
-  const [createState, createFormAction, createPending] = useServerAction(createUserAction, initial);
+  const [createState, , createPending, createSubmitAndWait] = useServerAction(createUserAction, initial);
   const [resetState, resetFormAction, resetPending] = useServerAction(resetPasswordAction, initial);
-  const [roleState, roleSubmit, rolePending] = useServerAction(updateUserRoleAction, initial);
-  const [statusState, statusFormAction, statusPending] = useServerAction(updateUserStatusAction, initial);
+  const [roleState, , rolePending, roleSubmitAndWait] = useServerAction(updateUserRoleAction, initial);
+  const [statusState, , statusPending, statusSubmitAndWait] = useServerAction(updateUserStatusAction, initial);
 
-  function handleCreateAction(formData: FormData) {
-    createFormAction(formData);
-    setCreateOpen(false);
-    router.refresh();
+  async function handleCreateAction(formData: FormData) {
+    const result = await createSubmitAndWait(formData);
+    if (result.ok) {
+      setCreateOpen(false);
+      router.refresh();
+    }
   }
 
-  function handleRoleAction(formData: FormData) {
-    roleSubmit(formData);
-    router.refresh();
+  async function handleRoleAction(formData: FormData) {
+    const result = await roleSubmitAndWait(formData);
+    if (result.ok) router.refresh();
   }
 
-  function handleStatusAction(formData: FormData) {
-    statusFormAction(formData);
-    setStatusTarget(null);
-    router.refresh();
+  async function handleStatusAction(formData: FormData) {
+    const result = await statusSubmitAndWait(formData);
+    if (result.ok) {
+      setStatusTarget(null);
+      router.refresh();
+    }
   }
 
   return (
@@ -72,6 +76,16 @@ export function UserManagementTable({
         </Button>
       </div>
 
+      {(roleState.error || statusState.error) && (
+        <p role="alert" className="rounded-[var(--radius-md)] border border-rose-200 bg-[var(--color-status-danger-bg)] p-3 text-xs font-medium text-rose-700">
+          {roleState.error || statusState.error}
+        </p>
+      )}
+      {(roleState.message || statusState.message) && (
+        <p role="status" className="rounded-[var(--radius-md)] border border-emerald-200 bg-[var(--color-status-success-bg)] p-3 text-xs font-medium text-emerald-800">
+          {roleState.message || statusState.message}
+        </p>
+      )}
       <div className="overflow-hidden rounded-[var(--radius-lg)] border border-slate-200 bg-white">
         <div className="overflow-x-auto">
           <table className="w-full text-right text-xs">
@@ -217,7 +231,7 @@ export function UserManagementTable({
                 {resetState.message}
               </p>
             )}
-            <Field label="کلمه عبور جدید" htmlFor="new-password" required hint="حداقل ۱۰ نویسه؛ نشست‌های فعال کاربر خاتمه می‌یابد.">
+            <Field label="کلمه عبور جدید" htmlFor="new-password" required hint="حداقل ۱۰ نویسه؛ نشست‌های جاری ممکن است تا پایان اعتبار توکن فعال بمانند.">
               <input id="new-password" name="newPassword" type="password" dir="ltr" required minLength={10} autoComplete="new-password" className={`${inputClass} dir-ltr font-mono`} />
             </Field>
             <div className="flex items-center justify-start gap-3 border-t border-slate-100 pt-4">
@@ -237,7 +251,7 @@ export function UserManagementTable({
         title="تغییر وضعیت حساب کاربری"
         message={
           statusTarget?.status === 'ACTIVE'
-            ? `با غیرفعال‌سازی حساب «${statusTarget?.fullName}»، ورود و تمام نشست‌های فعال او بلافاصله خاتمه می‌یابد. ادامه می‌دهید؟`
+            ? `با غیرفعال‌سازی حساب «${statusTarget?.fullName}»، دسترسی او به سامانه مسدود و ورودهای بعدی غیرفعال می‌شود. ادامه می‌دهید؟`
             : `آیا حساب «${statusTarget?.fullName}» مجدداً فعال شود؟`
         }
         confirmLabel={statusTarget?.status === 'ACTIVE' ? 'غیرفعال‌سازی حساب' : 'فعال‌سازی حساب'}
