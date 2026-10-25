@@ -12,6 +12,22 @@ import type { DegreeLevel } from '@/types';
 
 const MAX_APPLICANT_PHOTO_BYTES = 500 * 1024;
 
+const DUPLICATE_NATIONAL_ID_MESSAGE = 'این کد ملی قبلاً برای متقاضی دیگری ثبت شده است. لطفاً کد ملی را بررسی کنید.';
+
+/** Translate the database unique-constraint error into a clear, field-level Persian message. */
+function getDuplicateNationalIdError(error: { code?: string; message?: string; details?: string; hint?: string }) {
+  const diagnostic = [error.message, error.details, error.hint].filter(Boolean).join(' ');
+  if (error.code === '23505' && /applicant_sensitive_national_id_key|national_id/i.test(diagnostic)) {
+    return {
+      ok: false as const,
+      error: DUPLICATE_NATIONAL_ID_MESSAGE,
+      fieldErrors: { nationalId: 'این کد ملی قبلاً ثبت شده است.' },
+    };
+  }
+  return null;
+}
+
+
 export interface ApplicantActionState {
   ok: boolean;
   error?: string;
@@ -188,6 +204,10 @@ export async function createApplicantAction(
   const supabase = await createSupabaseServerClient();
   const { data: newId, error } = await supabase.rpc('create_applicant_full', { p_payload: payload });
   if (error || !newId) {
+    if (error) {
+      const duplicateNationalId = getDuplicateNationalIdError(error);
+      if (duplicateNationalId) return duplicateNationalId;
+    }
     return { ok: false, error: `ثبت متقاضی ناموفق بود: ${error?.message ?? 'خطای نامشخص'}` };
   }
 
@@ -255,6 +275,8 @@ export async function updateApplicantAction(
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc('update_applicant_full', { p_id: applicantId, p_payload: payload });
   if (error) {
+    const duplicateNationalId = getDuplicateNationalIdError(error);
+    if (duplicateNationalId) return duplicateNationalId;
     return { ok: false, error: `ذخیره تغییرات ناموفق بود: ${error.message}` };
   }
 
