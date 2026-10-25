@@ -203,6 +203,33 @@ export const organizationSchema = z.object({
   isSubsidiary: z.boolean().default(true),
 });
 
+export const organizationUpdateSchema = organizationSchema.extend({
+  organizationId: z.string().uuid(),
+  status: z.enum(['ACTIVE', 'INACTIVE']),
+});
+
+export const deleteOrganizationSchema = z.object({
+  organizationId: z.string().uuid(),
+});
+
+export const createProjectSchema = z.object({
+  organizationId: z.string().uuid(),
+  name: z.string().trim().min(2, 'نام پروژه الزامی است').max(200),
+  city: z.string().trim().max(80).optional(),
+  status: z.enum(['ACTIVE', 'COMPLETED', 'PLANNING']).default('ACTIVE'),
+});
+
+export const updateProjectSchema = z.object({
+  projectId: z.string().uuid(),
+  name: z.string().trim().min(2, 'نام پروژه الزامی است').max(200),
+  city: z.string().trim().max(80).optional(),
+  status: z.enum(['ACTIVE', 'COMPLETED', 'PLANNING']),
+});
+
+export const deleteProjectSchema = z.object({
+  projectId: z.string().uuid(),
+});
+
 export const vocabUpdateSchema = z.object({
   key: z.enum(['cities', 'job_categories']),
   action: z.enum(['add', 'remove']),
