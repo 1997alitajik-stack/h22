@@ -83,6 +83,68 @@ const STEPS = [
   { num: 4, title: 'مهارت‌ها و ترجیحات' },
 ];
 
+const MAX_PHOTO_BYTES = 500 * 1024;
+
+async function canvasToJpegBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error('آماده‌سازی تصویر ناموفق بود.'))),
+      'image/jpeg',
+      quality,
+    );
+  });
+}
+
+/** Center-crops any accepted image to a true 3:4 portrait and compresses it to <= 500 KiB. */
+async function normalizeApplicantPhoto(source: File): Promise<File> {
+  const bitmap = await createImageBitmap(source);
+  try {
+    if (!bitmap.width || !bitmap.height) throw new Error('ابعاد تصویر معتبر نیست.');
+
+    const targetRatio = 3 / 4;
+    let sx = 0;
+    let sy = 0;
+    let sw = bitmap.width;
+    let sh = bitmap.height;
+    if (bitmap.width / bitmap.height > targetRatio) {
+      sw = bitmap.height * targetRatio;
+      sx = (bitmap.width - sw) / 2;
+    } else if (bitmap.width / bitmap.height < targetRatio) {
+      sh = bitmap.width / targetRatio;
+      sy = (bitmap.height - sh) / 2;
+    }
+
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('مرورگر امکان پردازش تصویر را فراهم نکرد.');
+
+    for (const [width, height] of [[750, 1000], [600, 800], [450, 600], [300, 400]] as const) {
+      canvas.width = width;
+      canvas.height = height;
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, width, height);
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      context.drawImage(bitmap, sx, sy, sw, sh, 0, 0, width, height);
+
+      for (const quality of [0.9, 0.82, 0.74, 0.66, 0.58, 0.5, 0.42]) {
+        const blob = await canvasToJpegBlob(canvas, quality);
+        if (blob.size <= MAX_PHOTO_BYTES) {
+          const baseName = source.name.replace(/\.[^.]+$/, '').trim() || 'applicant-photo';
+          return new File([blob], baseName + '.jpg', {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+          });
+        }
+      }
+    }
+
+    throw new Error('کاهش حجم تصویر به کمتر از ۵۰۰ کیلوبایت ممکن نشد؛ لطفاً تصویر دیگری انتخاب کنید.');
+  } finally {
+    bitmap.close();
+  }
+}
+
 const emptyEmployment = (city: string): FormEmployment => ({
   employerName: '',
   isGroupEntity: false,
@@ -128,23 +190,34 @@ export function ApplicantForm({ mode, applicantId, applicantCode, cities, catego
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(initialPhotoUrl ?? null);
   const [removePhoto, setRemovePhoto] = useState(false);
+  const [processingPhoto, setProcessingPhoto] = useState(false);
 
-  function handlePhotoSelected(file: File | null) {
+  async function handlePhotoSelected(file: File | null) {
     if (!file) return;
     if (!['image/jpeg', 'image/png'].includes(file.type) || !/\.(jpe?g|png)$/i.test(file.name)) {
       setFormError('برای تصویر پروفایل فقط فایل JPG یا PNG قابل قبول است.');
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      setFormError('حجم تصویر باید کمتر از ۱۰ مگابایت باشد.');
+    if (file.size > 20 * 1024 * 1024) {
+      setFormError('حجم تصویر اصلی بیش از ۲۰ مگابایت است؛ لطفاً تصویر کوچک‌تری انتخاب کنید.');
       return;
     }
-    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview);
-    setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
-    setRemovePhoto(false);
+
+    setProcessingPhoto(true);
     setFormError('');
-    setDirty(true);
+    try {
+      const normalized = await normalizeApplicantPhoto(file);
+      if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview);
+      setPhotoFile(normalized);
+      setPhotoPreview(URL.createObjectURL(normalized));
+      setRemovePhoto(false);
+      setDirty(true);
+      setFormError('');
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'پردازش تصویر ناموفق بود.');
+    } finally {
+      setProcessingPhoto(false);
+    }
   }
 
   function clearPhoto() {
@@ -203,6 +276,10 @@ export function ApplicantForm({ mode, applicantId, applicantCode, cities, catego
   }
 
   async function handleSubmit() {
+    if (processingPhoto) {
+      setFormError('لطفاً تا پایان آماده‌سازی تصویر صبر کنید.');
+      return;
+    }
     setFormError('');
     setErrors({});
 
@@ -347,14 +424,14 @@ export function ApplicantForm({ mode, applicantId, applicantCode, cities, catego
               <div
                 role={photoPreview ? 'img' : 'presentation'}
                 aria-label={photoPreview ? 'پیش‌نمایش تصویر متقاضی' : undefined}
-                className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white bg-cover bg-center text-slate-400"
+                className="flex h-32 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white bg-cover bg-center text-slate-400"
                 style={photoPreview ? { backgroundImage: `url(${JSON.stringify(photoPreview)})` } : undefined}
               >
                 {!photoPreview && <UserRound className="h-9 w-9" aria-hidden />}
               </div>
               <div className="min-w-0 flex-1 space-y-1">
                 <p className="text-xs font-bold text-slate-800">تصویر پروفایل متقاضی</p>
-                <p className="text-[11px] leading-5 text-slate-500">تصویر پرسنلی JPG یا PNG، حداکثر ۱۰ مگابایت. تصویر انتخاب‌شده پیش از ذخیره قابل مشاهده است و پس از ثبت نیز در پرونده نمایش داده می‌شود.</p>
+                <p className="text-[11px] leading-5 text-slate-500">تصویر JPG یا PNG به‌صورت خودکار از مرکز با نسبت ۳×۴ برش می‌خورد و به JPG با حجم حداکثر ۵۰۰ کیلوبایت تبدیل می‌شود.</p>
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-md)] border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 transition-soft hover:border-teal-300 hover:bg-teal-50">
                     <ImagePlus className="h-3.5 w-3.5 text-teal-700" aria-hidden />
@@ -363,11 +440,15 @@ export function ApplicantForm({ mode, applicantId, applicantCode, cities, catego
                       type="file"
                       accept="image/jpeg,image/png,.jpg,.jpeg,.png"
                       className="sr-only"
-                      onChange={(event) => handlePhotoSelected(event.target.files?.[0] ?? null)}
+                      disabled={processingPhoto}
+                      onChange={(event) => {
+                        void handlePhotoSelected(event.target.files?.[0] ?? null);
+                        event.currentTarget.value = '';
+                      }}
                     />
                   </label>
                   {photoPreview && (
-                    <Button type="button" variant="ghost" className="px-3 py-2 text-[11px] text-rose-700" onClick={clearPhoto}>
+                    <Button type="button" variant="ghost" disabled={processingPhoto} className="px-3 py-2 text-[11px] text-rose-700" onClick={clearPhoto}>
                       حذف تصویر
                     </Button>
                   )}
@@ -698,9 +779,9 @@ export function ApplicantForm({ mode, applicantId, applicantCode, cities, catego
           <Button variant="ghost" onClick={() => (dirty ? setDiscardOpen(true) : router.push('/applicants'))}>
             انصراف
           </Button>
-          <Button onClick={handleSubmit} loading={submitting}>
+          <Button onClick={handleSubmit} loading={submitting || processingPhoto} disabled={processingPhoto}>
             <Save className="h-4 w-4" aria-hidden />
-            {submitting ? 'در حال ذخیره‌سازی…' : mode === 'edit' ? 'ذخیره تغییرات پرونده' : 'ایجاد پرونده متقاضی'}
+            {processingPhoto ? 'در حال آماده‌سازی تصویر…' : submitting ? 'در حال ذخیره‌سازی…' : mode === 'edit' ? 'ذخیره تغییرات پرونده' : 'ایجاد پرونده متقاضی'}
           </Button>
         </div>
       </div>
