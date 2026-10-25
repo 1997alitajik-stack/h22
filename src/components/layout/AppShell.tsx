@@ -18,6 +18,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { BrandMark } from './BrandMark';
+import { FirstLoginTour } from './FirstLoginTour';
 import { initialsOf } from '@/lib/persian';
 import type { SessionUser } from '@/types';
 
@@ -83,15 +84,15 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
 
   const sidebar = (
     <div className="flex h-full flex-col bg-[var(--color-structure)] text-slate-200">
-      <div className="flex h-16 shrink-0 items-center border-b border-slate-800/90 px-4">
-        <Link href="/" className="flex items-center gap-2.5" onClick={() => setMobileOpen(false)}>
-          <BrandMark size="sm" theme="dark" withText={false} />
-          <span>
-            <span className="block text-sm font-extrabold tracking-tight text-white">راستا</span>
-            <span className="block text-[10px] leading-tight text-teal-300/80">
-              راهکار ارزیابی سوابق، تخصص و استعدادها
-            </span>
-          </span>
+      <div className="relative flex min-h-20 shrink-0 items-center justify-center border-b border-slate-800/90 px-4 py-2">
+        <Link
+          href="/"
+          data-tour="brand"
+          aria-label="راستا، بازگشت به داشبورد"
+          className="flex min-w-0 items-center justify-center"
+          onClick={() => setMobileOpen(false)}
+        >
+          <BrandMark size="md" theme="dark" withText />
         </Link>
         <button
           type="button"
@@ -120,6 +121,7 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
                     <li key={item.href}>
                       <Link
                         href={item.href}
+                        data-tour={`nav-${item.href === '/' ? 'dashboard' : item.href.slice(1)}`}
                         onClick={() => setMobileOpen(false)}
                         aria-current={active ? 'page' : undefined}
                         className={`flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-xs font-medium transition-soft ${
@@ -184,12 +186,18 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
             >
               <Menu className="h-5 w-5" aria-hidden />
             </button>
-            <span className="truncate text-sm font-semibold text-slate-900">
+            <span data-tour="topbar-title" className="truncate text-sm font-semibold text-slate-900">
               سامانه راستا
             </span>
           </div>
 
-          <div className="relative shrink-0">
+          <div className="flex shrink-0 items-center gap-1.5">
+            <FirstLoginTour
+              userId={user.id}
+              isAdmin={isAdmin}
+              onMobileNavChange={setMobileOpen}
+            />
+            <div className="relative shrink-0">
             <button
               type="button"
               onClick={() => setUserMenuOpen((v) => !v)}
@@ -236,6 +244,7 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
                 </form>
               </div>
             )}
+            </div>
           </div>
         </header>
 
