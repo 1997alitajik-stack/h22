@@ -4,6 +4,7 @@ import { requireUser } from '@/lib/auth';
 import { getApplicantDetail } from '@/server/applicants';
 import { toPersianDigits, formatJalali } from '@/lib/persian';
 import { PriorityBadge, RecruitmentStatusBadge } from '@/components/ui/Badges';
+import { UserRound } from 'lucide-react';
 import { ApplicantProfileView } from './ApplicantProfileView';
 
 export const metadata = { title: 'پرونده متقاضی' };
@@ -31,8 +32,17 @@ export default async function ApplicantProfilePage({
       {/* Profile header */}
       <section className="rounded-[var(--radius-lg)] border border-slate-200 bg-white p-5 sm:p-6">
         <div className="flex flex-col justify-between gap-5 md:flex-row md:items-start">
-          <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex min-w-0 items-start gap-4">
+            <div
+              role={applicant.photo_url ? 'img' : 'presentation'}
+              aria-label={applicant.photo_url ? `تصویر ${applicant.full_name}` : undefined}
+              className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 bg-cover bg-center text-slate-400 sm:h-24 sm:w-24"
+              style={applicant.photo_url ? { backgroundImage: `url(${JSON.stringify(applicant.photo_url)})` } : undefined}
+            >
+              {!applicant.photo_url && <UserRound className="h-8 w-8" aria-hidden />}
+            </div>
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="text-xl font-bold text-slate-900">{applicant.full_name}</h1>
               <span className="num rounded-[var(--radius-sm)] border border-slate-200 bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600">
                 {applicant.public_code}
@@ -53,6 +63,7 @@ export default async function ApplicantProfilePage({
             </div>
             <div className="pt-2">
               <PriorityBadge priority={applicant.group_priority} />
+            </div>
             </div>
           </div>
 
