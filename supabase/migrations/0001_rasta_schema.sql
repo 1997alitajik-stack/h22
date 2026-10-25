@@ -635,7 +635,13 @@ declare
   v_reason text;
 begin
   v_applicant := coalesce(new.applicant_id, old.applicant_id);
-  perform rasta.compute_priority(v_applicant, v_priority, v_reason);
+
+  -- compute_priority has one input argument and returns priority/reason as OUT
+  -- columns. Calling it with three arguments raises an undefined-function error.
+  select result.priority, result.reason
+    into v_priority, v_reason
+    from rasta.compute_priority(v_applicant) as result;
+
   update public.applicants
      set group_priority = v_priority, group_priority_reason = v_reason
    where id = v_applicant;
