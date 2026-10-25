@@ -32,7 +32,7 @@ export default async function EditApplicantPage({
       applicantCode={applicant.public_code}
       cities={vocab.cities}
       categories={vocab.job_categories}
-      organizations={organizations.map((o) => ({ id: o.id, name: o.name_fa }))}
+      organizations={organizations.filter((o) => o.status === 'ACTIVE').map((o) => ({ id: o.id, name: o.name_fa }))}
       initial={{
         firstName: applicant.first_name,
         lastName: applicant.last_name,
