@@ -140,7 +140,9 @@ export function ApplicantDirectory({ user, result, filters, cities, categories }
             value={searchInput}
             onChange={setSearchInput}
             onSubmit={(query) => pushParams({ q: query || null, page: null })}
-            placeholder="جستجو: نام، شناسه، تخصص، مهارت، کارفرمای پیشین…"
+            placeholder={user.role === 'ADMIN'
+              ? 'جستجو: نام، شناسه، تخصص، مهارت، سابقه کاری یا کد ملی…'
+              : 'جستجو: نام، شناسه، تخصص، مهارت یا سابقه کاری…'}
             className="relative min-w-0 flex-1"
           />
           <Button
