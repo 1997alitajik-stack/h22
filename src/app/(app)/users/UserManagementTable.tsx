@@ -25,16 +25,15 @@ interface Row {
   status: 'ACTIVE' | 'INACTIVE';
   department: string | null;
   createdAt: string;
+  initials: string;
 }
 
 export function UserManagementTable({
   currentUserId,
   users,
-  initialsOf,
 }: {
   currentUserId: string;
   users: Row[];
-  initialsOf: (name: string) => string;
 }) {
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
@@ -106,7 +105,7 @@ export function UserManagementTable({
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-strong)] text-xs font-bold text-white">
-                        {initialsOf(u.fullName)}
+                        {u.initials}
                       </div>
                       <div className="font-semibold text-slate-900">{u.fullName || '—'}</div>
                     </div>
