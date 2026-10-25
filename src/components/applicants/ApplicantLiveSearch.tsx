@@ -37,16 +37,16 @@ export function ApplicantLiveSearch({
 
   function changeValue(nextValue: string) {
     if (value === undefined) setUncontrolledValue(nextValue);
+    if (nextValue.trim().length < 2) {
+      setResults([]);
+      setLoading(false);
+      setRequestError(false);
+    }
     onChange?.(nextValue);
   }
 
   useEffect(() => {
-    if (term.length < 2) {
-      setResults([]);
-      setLoading(false);
-      setRequestError(false);
-      return;
-    }
+    if (term.length < 2) return;
 
     const controller = new AbortController();
     setLoading(true);
@@ -112,7 +112,6 @@ export function ApplicantLiveSearch({
           placeholder={placeholder}
           aria-label="جستجوی متقاضیان"
           aria-controls={resultsId}
-          aria-expanded={showSuggestions}
           autoComplete="off"
           className={inputClass + ' pr-10 pl-9'}
         />
