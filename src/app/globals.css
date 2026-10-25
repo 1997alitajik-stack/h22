@@ -150,7 +150,7 @@ input:disabled,
 
 /* Glossy HERA logo: layered transparent faces create visible extrusion during rotation. */
 .rasta-logo-full-stage {
-  aspect-ratio: 448 / 568;
+  aspect-ratio: 330 / 419;
   perspective: 900px;
   transform: translateZ(0);
   overflow: visible;
