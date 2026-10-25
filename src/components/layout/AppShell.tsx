@@ -16,6 +16,7 @@ import {
   LogOut,
   Eye,
   UserPlus,
+  UserRound,
 } from 'lucide-react';
 import { BrandMark } from './BrandMark';
 import { FirstLoginTour } from './FirstLoginTour';
@@ -232,6 +233,15 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
                 >
                   خروج
                 </a>
+                <Link
+                  href="/profile"
+                  role="menuitem"
+                  onClick={() => setUserMenuOpen(false)}
+                  className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-xs font-medium text-slate-700 transition-soft hover:bg-teal-50 hover:text-teal-900"
+                >
+                  <UserRound className="h-3.5 w-3.5 text-teal-700" aria-hidden />
+                  پروفایل من و ویرایش اطلاعات
+                </Link>
                 <form action="/api/auth/signout" method="post" className="p-0">
                   <button
                     type="submit"
