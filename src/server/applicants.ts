@@ -166,6 +166,23 @@ export async function getApplicantDetail(
       .order('created_at', { ascending: false }),
   ]);
 
+  const { data: photoAttachment } = await supabase
+    .from('attachments')
+    .select('storage_path')
+    .eq('applicant_id', id)
+    .eq('category', 'ID_PHOTO')
+    .order('uploaded_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let photoUrl: string | null = null;
+  if (photoAttachment?.storage_path) {
+    const { data: signedPhoto } = await supabase.storage
+      .from('applicant-documents')
+      .createSignedUrl(photoAttachment.storage_path, 300);
+    photoUrl = signedPhoto?.signedUrl ?? null;
+  }
+
   const m = (masked ?? {}) as {
     national_id_masked?: string | null;
     phone_masked?: string | null;
@@ -196,6 +213,7 @@ export async function getApplicantDetail(
     ...(applicant as unknown as ApplicantDetail),
     national_id_masked: m.national_id_masked ?? null,
     phone_masked: m.phone_masked ?? null,
+    photo_url: photoUrl,
     employment: ((employment ?? []) as unknown as RawEmployment[]).map((e) => {
       const sens = Array.isArray(e.employment_sensitive) ? e.employment_sensitive[0] : undefined;
       return {
