@@ -34,7 +34,6 @@ const RECRUITMENT_STATUSES = [
   'NEW', 'UNDER_REVIEW', 'INTERVIEWING', 'SHORTLISTED',
   'OFFERED', 'HIRED', 'REJECTED', 'ARCHIVED',
 ] as const;
-const DEGREE_LEVELS = ['BACHELOR', 'MASTER', 'ASSOCIATE', 'BACHELOR', 'DOCTORATE', 'DIPLOMA'] as const;
 const SKILLS = [
   { name: 'AutoCAD', category: 'TOOL_SOFTWARE', level: 'ADVANCED' },
   { name: 'Revit', category: 'TOOL_SOFTWARE', level: 'INTERMEDIATE' },
@@ -98,7 +97,7 @@ export async function seedDemoApplicants(actor: SessionUser): Promise<{ created:
       primary_job_title: job.title,
       primary_job_category: job.category,
       years_of_experience: (i * 7) % 26,
-      highest_degree: DEGREE_LEVELS[i % DEGREE_LEVELS.length],
+      highest_degree: job.degree,
       highest_degree_title: job.degreeTitle,
       highest_field_of_study: job.field,
       recruitment_status: RECRUITMENT_STATUSES[i % RECRUITMENT_STATUSES.length],
@@ -172,7 +171,7 @@ export async function seedDemoApplicants(actor: SessionUser): Promise<{ created:
 
     const educationRows = created.map((row, i) => ({
       applicant_id: row.id,
-      degree_level: DEGREE_LEVELS[i % DEGREE_LEVELS.length],
+      degree_level: JOBS[i % JOBS.length]!.degree,
       degree_title: JOBS[i % JOBS.length]!.degreeTitle,
       field_of_study: JOBS[i % JOBS.length]!.field,
       institution_name: INSTITUTIONS[i % INSTITUTIONS.length]!,
