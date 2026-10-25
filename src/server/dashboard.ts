@@ -38,19 +38,19 @@ export async function getDashboardMetrics(user: SessionUser): Promise<DashboardM
     { data: recent },
     { data: openList },
   ] = await Promise.all([
-    supabase.from('applicants').select('id', { count: 'exact', head: true }),
+    supabase.from('applicants').select('id', { count: 'exact', head: true }).throwOnError(),
     supabase
       .from('applicants')
       .select('id', { count: 'exact', head: true })
-      .gte('created_at', startOfCurrentJalaliMonth()),
-    supabase.from('applicants').select('group_priority'),
-    supabase.from('applicants').select('id', { count: 'exact', head: true }).lt('completeness', 70),
-    supabase.from('vacancies').select('id', { count: 'exact', head: true }).eq('status', 'OPEN'),
-    supabase.from('applicants').select('primary_job_category'),
-    supabase.from('applicants').select('residential_city'),
-    supabase.from('applicants').select('recruitment_status'),
-    supabase.from('applicants').select(APPLICANT_LIST_COLUMNS).order('created_at', { ascending: false }).limit(6),
-    supabase.from('vacancies').select(VACANCY_LIST_COLUMNS).eq('status', 'OPEN').order('opened_at', { ascending: false }).limit(4),
+      .gte('created_at', startOfCurrentJalaliMonth()).throwOnError(),
+    supabase.from('applicants').select('group_priority').throwOnError(),
+    supabase.from('applicants').select('id', { count: 'exact', head: true }).lt('completeness', 70).throwOnError(),
+    supabase.from('vacancies').select('id', { count: 'exact', head: true }).eq('status', 'OPEN').throwOnError(),
+    supabase.from('applicants').select('primary_job_category').throwOnError(),
+    supabase.from('applicants').select('residential_city').throwOnError(),
+    supabase.from('applicants').select('recruitment_status').throwOnError(),
+    supabase.from('applicants').select(APPLICANT_LIST_COLUMNS).order('created_at', { ascending: false }).limit(6).throwOnError(),
+    supabase.from('vacancies').select(VACANCY_LIST_COLUMNS).eq('status', 'OPEN').order('opened_at', { ascending: false }).limit(4).throwOnError(),
   ]);
 
   const priority = tally(priorityRows, (r) => r.group_priority);
