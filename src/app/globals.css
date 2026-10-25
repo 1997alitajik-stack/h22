@@ -148,29 +148,72 @@ input:disabled,
 }
 
 
-/* Spin the supplied RASTA emblem/lockup around its central Y axis. */
+/* Glossy HERA logo: layered transparent faces create visible extrusion during rotation. */
 .rasta-logo-full-stage {
-  aspect-ratio: 224 / 282;
-  perspective: 700px;
+  aspect-ratio: 448 / 568;
+  perspective: 900px;
   transform: translateZ(0);
+  overflow: visible;
 }
+
 .rasta-logo-mark-stage {
-  perspective: 700px;
+  perspective: 560px;
 }
+
 .rasta-logo-rotor {
+  position: relative;
+  width: 100%;
+  height: 100%;
   transform-style: preserve-3d;
   transform-origin: 50% 50%;
   backface-visibility: visible;
-  animation: rasta-logo-central-spin 9s linear infinite;
+  will-change: transform;
+  animation: rasta-logo-central-spin 10s linear infinite;
 }
+
+.rasta-logo-extrusion {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background-image: url('/rasta-logo.webp');
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: 100% auto;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+.rasta-logo-face {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  user-select: none;
+  backface-visibility: hidden;
+  pointer-events: none;
+}
+
+.rasta-logo-front {
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 22%));
+}
+
+.rasta-logo-back {
+  filter: brightness(0.9) drop-shadow(0 1px 1px rgb(0 0 0 / 30%));
+}
+
 @keyframes rasta-logo-central-spin {
-  from { transform: perspective(700px) rotateY(0deg); }
-  to { transform: perspective(700px) rotateY(360deg); }
+  from { transform: perspective(900px) rotateY(0deg); }
+  to { transform: perspective(900px) rotateY(360deg); }
 }
+
 @media (prefers-reduced-motion: reduce) {
   .rasta-logo-rotor {
     animation: none !important;
     transform: none !important;
+    will-change: auto;
   }
 }
 
