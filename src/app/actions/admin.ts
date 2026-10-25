@@ -8,6 +8,11 @@ import {
   createUserSchema,
   linkCandidacySchema,
   organizationSchema,
+  organizationUpdateSchema,
+  deleteOrganizationSchema,
+  createProjectSchema,
+  updateProjectSchema,
+  deleteProjectSchema,
   resetPasswordSchema,
   updateStageSchema,
   userRoleSchema,
@@ -27,7 +32,7 @@ import {
   updateUserRole,
   updateUserStatus,
 } from '@/server/users';
-import { createOrganization, updateVocabulary } from '@/server/misc';
+import { createOrganization, updateOrganization, deleteOrganization, createProject, updateProject, deleteProject, updateVocabulary } from '@/server/misc';
 import type { VacancyListRow } from '@/types';
 
 export interface SimpleActionState {
@@ -275,6 +280,133 @@ export async function createOrganizationAction(
   }
 }
 
+
+export async function updateOrganizationAction(
+  _prev: SimpleActionState,
+  formData: FormData,
+): Promise<SimpleActionState> {
+  const user = await requireAdmin('/organization');
+  const parsed = organizationUpdateSchema.safeParse({
+    organizationId: formData.get('organizationId'),
+    nameFa: formData.get('nameFa'),
+    code: formData.get('code'),
+    field: formData.get('field') ?? '',
+    city: formData.get('city') ?? '',
+    status: formData.get('status'),
+  });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'اطلاعات شرکت معتبر نیست.' };
+
+  try {
+    await updateOrganization(user, parsed.data);
+    await adminAudit(user, 'ORGANIZATION', `ویرایش اطلاعات شرکت «${parsed.data.nameFa}»`, {
+      recordIdentifier: parsed.data.organizationId,
+      severity: 'MEDIUM',
+    });
+    revalidatePath('/organization');
+    revalidatePath('/applicants');
+    revalidatePath('/applicants/new');
+    return { ok: true, message: 'اطلاعات شرکت به‌روزرسانی شد.' };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'ویرایش شرکت ناموفق بود.' };
+  }
+}
+
+export async function deleteOrganizationAction(
+  _prev: SimpleActionState,
+  formData: FormData,
+): Promise<SimpleActionState> {
+  const user = await requireAdmin('/organization');
+  const parsed = deleteOrganizationSchema.safeParse({ organizationId: formData.get('organizationId') });
+  if (!parsed.success) return { ok: false, error: 'شناسه شرکت معتبر نیست.' };
+
+  try {
+    await deleteOrganization(user, parsed.data.organizationId);
+    await adminAudit(user, 'ORGANIZATION', 'حذف شرکت از ساختار سازمانی', {
+      recordIdentifier: parsed.data.organizationId,
+      severity: 'HIGH',
+    });
+    revalidatePath('/organization');
+    revalidatePath('/applicants');
+    revalidatePath('/applicants/new');
+    return { ok: true, message: 'شرکت از ساختار سازمانی حذف شد.' };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'حذف شرکت ناموفق بود.' };
+  }
+}
+
+export async function createProjectAction(
+  _prev: SimpleActionState,
+  formData: FormData,
+): Promise<SimpleActionState> {
+  const user = await requireAdmin('/organization');
+  const parsed = createProjectSchema.safeParse({
+    organizationId: formData.get('organizationId'),
+    name: formData.get('name'),
+    city: formData.get('city') ?? '',
+    status: formData.get('status') || 'ACTIVE',
+  });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'اطلاعات پروژه معتبر نیست.' };
+
+  try {
+    await createProject(user, parsed.data);
+    await adminAudit(user, 'ORGANIZATION', `افزودن پروژه «${parsed.data.name}»`, {
+      recordIdentifier: parsed.data.organizationId,
+      severity: 'MEDIUM',
+    });
+    revalidatePath('/organization');
+    return { ok: true, message: 'پروژه به ساختار سازمانی افزوده شد.' };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'ثبت پروژه ناموفق بود.' };
+  }
+}
+
+export async function updateProjectAction(
+  _prev: SimpleActionState,
+  formData: FormData,
+): Promise<SimpleActionState> {
+  const user = await requireAdmin('/organization');
+  const parsed = updateProjectSchema.safeParse({
+    projectId: formData.get('projectId'),
+    name: formData.get('name'),
+    city: formData.get('city') ?? '',
+    status: formData.get('status'),
+  });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'اطلاعات پروژه معتبر نیست.' };
+
+  try {
+    await updateProject(user, parsed.data);
+    await adminAudit(user, 'ORGANIZATION', `ویرایش پروژه «${parsed.data.name}»`, {
+      recordIdentifier: parsed.data.projectId,
+      severity: 'MEDIUM',
+    });
+    revalidatePath('/organization');
+    return { ok: true, message: 'پروژه به‌روزرسانی شد.' };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'ویرایش پروژه ناموفق بود.' };
+  }
+}
+
+export async function deleteProjectAction(
+  _prev: SimpleActionState,
+  formData: FormData,
+): Promise<SimpleActionState> {
+  const user = await requireAdmin('/organization');
+  const parsed = deleteProjectSchema.safeParse({ projectId: formData.get('projectId') });
+  if (!parsed.success) return { ok: false, error: 'شناسه پروژه معتبر نیست.' };
+
+  try {
+    await deleteProject(user, parsed.data.projectId);
+    await adminAudit(user, 'ORGANIZATION', 'حذف پروژه از ساختار سازمانی', {
+      recordIdentifier: parsed.data.projectId,
+      severity: 'HIGH',
+    });
+    revalidatePath('/organization');
+    return { ok: true, message: 'پروژه حذف شد.' };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'حذف پروژه ناموفق بود.' };
+  }
+}
+
 export async function updateVocabularyAction(
   _prev: SimpleActionState,
   formData: FormData,
@@ -373,10 +505,16 @@ export async function updateOwnProfileAction(
 
   try {
     await updateOwnProfile(actor, parsed.data);
-    await adminAudit(actor, 'USER', 'به‌روزرسانی پروفایل شخصی', {
-      recordIdentifier: actor.id,
-      severity: 'LOW',
-    });
+    try {
+      await adminAudit(actor, 'USER', 'به‌روزرسانی پروفایل شخصی', {
+        recordIdentifier: actor.id,
+        severity: 'LOW',
+      });
+    } catch (auditError) {
+      // Viewer roles cannot write ADMIN_SECURITY events; do not report a failed
+      // profile update when the profile was already saved successfully.
+      console.error('[RASTA_PROFILE] Profile updated but audit could not be written', auditError);
+    }
     revalidatePath('/profile');
     revalidatePath('/');
     return { ok: true, message: 'اطلاعات پروفایل شما به‌روزرسانی شد.' };
