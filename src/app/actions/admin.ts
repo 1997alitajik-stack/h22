@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdmin, requireUser } from '@/lib/auth';
 import { adminAudit } from '@/lib/audit';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import {
@@ -12,12 +12,17 @@ import {
   updateStageSchema,
   userRoleSchema,
   userStatusSchema,
+  userAccountUpdateSchema,
+  ownProfileUpdateSchema,
   vacancyFormSchema,
   vocabUpdateSchema,
 } from '@/lib/validation';
 import { createVacancy, linkCandidacy, updateCandidacyStage, updateVacancyStatus } from '@/server/vacancies';
 import {
   createUserAccount,
+  updateUserAccount,
+  deleteUserAccount,
+  updateOwnProfile,
   resetUserPassword,
   updateUserRole,
   updateUserStatus,
@@ -293,3 +298,90 @@ export async function updateVocabularyAction(
     return { ok: false, error: err instanceof Error ? err.message : 'خطا در به‌روزرسانی واژگان' };
   }
 }
+
+export async function updateUserAccountAction(
+  _prev: SimpleActionState,
+  formData: FormData,
+): Promise<SimpleActionState> {
+  const actor = await requireAdmin('/users');
+  const parsed = userAccountUpdateSchema.safeParse({
+    userId: formData.get('userId'),
+    email: formData.get('email'),
+    fullName: formData.get('fullName'),
+    username: formData.get('username') ?? '',
+    department: formData.get('department') ?? '',
+  });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'اطلاعات حساب معتبر نیست.' };
+  }
+
+  try {
+    await updateUserAccount(actor, parsed.data.userId, {
+      email: parsed.data.email,
+      fullName: parsed.data.fullName,
+      username: parsed.data.username,
+      department: parsed.data.department,
+    });
+    await adminAudit(actor, 'USER', `ویرایش مشخصات حساب کاربری ${parsed.data.fullName}`, {
+      recordIdentifier: parsed.data.userId,
+      severity: 'MEDIUM',
+    });
+    revalidatePath('/users');
+    revalidatePath('/profile');
+    return { ok: true, message: 'مشخصات حساب کاربری ذخیره شد.' };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'ویرایش حساب ناموفق بود.' };
+  }
+}
+
+export async function deleteUserAction(
+  _prev: SimpleActionState,
+  formData: FormData,
+): Promise<SimpleActionState> {
+  const actor = await requireAdmin('/users');
+  const userId = String(formData.get('userId') ?? '');
+  if (!/^[0-9a-fA-F-]{36}$/.test(userId)) {
+    return { ok: false, error: 'شناسه حساب معتبر نیست.' };
+  }
+
+  try {
+    await deleteUserAccount(actor, userId);
+    await adminAudit(actor, 'USER', 'حذف حساب کاربری', {
+      recordIdentifier: userId,
+      severity: 'HIGH',
+    });
+    revalidatePath('/users');
+    return { ok: true, message: 'حساب کاربر حذف شد.' };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'حذف حساب ناموفق بود.' };
+  }
+}
+
+export async function updateOwnProfileAction(
+  _prev: SimpleActionState,
+  formData: FormData,
+): Promise<SimpleActionState> {
+  const actor = await requireUser('/profile');
+  const parsed = ownProfileUpdateSchema.safeParse({
+    fullName: formData.get('fullName'),
+    username: formData.get('username') ?? '',
+    department: formData.get('department') ?? '',
+  });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'اطلاعات پروفایل معتبر نیست.' };
+  }
+
+  try {
+    await updateOwnProfile(actor, parsed.data);
+    await adminAudit(actor, 'USER', 'به‌روزرسانی پروفایل شخصی', {
+      recordIdentifier: actor.id,
+      severity: 'LOW',
+    });
+    revalidatePath('/profile');
+    revalidatePath('/');
+    return { ok: true, message: 'اطلاعات پروفایل شما به‌روزرسانی شد.' };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'به‌روزرسانی پروفایل ناموفق بود.' };
+  }
+}
+
