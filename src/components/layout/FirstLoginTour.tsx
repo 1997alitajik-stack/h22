@@ -182,23 +182,34 @@ export function FirstLoginTour({
 
   useEffect(() => {
     if (pathname !== '/') return;
-    try {
-      if (window.localStorage.getItem(storageKey) !== 'complete') {
+    let frame = 0;
+    const scheduleStart = () => {
+      frame = window.requestAnimationFrame(() => {
         setStepIndex(0);
         setIsOpen(true);
-      }
+      });
+    };
+
+    try {
+      if (window.localStorage.getItem(storageKey) !== 'complete') scheduleStart();
     } catch {
       // If storage is blocked, show the first-use tour for this page visit.
-      setStepIndex(0);
-      setIsOpen(true);
+      scheduleStart();
     }
+
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+    };
   }, [pathname, storageKey]);
 
   useEffect(() => {
     if (!startWhenHome || pathname !== '/') return;
-    setStepIndex(0);
-    setIsOpen(true);
-    setStartWhenHome(false);
+    const frame = window.requestAnimationFrame(() => {
+      setStepIndex(0);
+      setIsOpen(true);
+      setStartWhenHome(false);
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [pathname, startWhenHome]);
 
   useEffect(() => {
