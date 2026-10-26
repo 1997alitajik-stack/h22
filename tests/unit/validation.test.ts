@@ -5,6 +5,7 @@ import {
   nationalIdSchema,
   phoneSchema,
   verifyEmploymentSchema,
+  vacancyFormSchema,
 } from '@/lib/validation';
 
 describe('Jalali date validation', () => {
@@ -107,6 +108,46 @@ describe('applicant form schema', () => {
 
   it('caps experience at 60 years', () => {
     expect(applicantFormSchema.safeParse({ ...base, yearsOfExperience: 61 }).success).toBe(false);
+  });
+});
+
+describe('vacancy form organization hierarchy', () => {
+  const parentVacancy = {
+    title: 'سرپرست دفتر فنی',
+    category: 'مهندسی عمران و سازه',
+    organizationType: 'PARENT',
+    organizationName: 'هلدینگ مادر',
+    city: 'تهران',
+    openPositionsCount: '1',
+    employmentType: 'FULL_TIME',
+    minYearsExperience: '0',
+    requiredSkillsCsv: '',
+    preferredSkillsCsv: '',
+  };
+
+  it('accepts a parent holding vacancy without a subsidiary or project link', () => {
+    const parsed = vacancyFormSchema.safeParse(parentVacancy);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.status).toBe('OPEN');
+  });
+
+  it('requires a company when the vacancy is for a subsidiary', () => {
+    const parsed = vacancyFormSchema.safeParse({
+      ...parentVacancy,
+      organizationType: 'SUBSIDIARY',
+      organizationName: '',
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) expect(JSON.stringify(parsed.error.issues)).toContain('انتخاب شرکت');
+  });
+
+  it('does not allow a parent vacancy to be attached to a project', () => {
+    const parsed = vacancyFormSchema.safeParse({
+      ...parentVacancy,
+      projectId: crypto.randomUUID(),
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) expect(JSON.stringify(parsed.error.issues)).toContain('پروژه باید');
   });
 });
 
