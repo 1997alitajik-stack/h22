@@ -168,14 +168,14 @@ input:disabled,
   transform-origin: 50% 50%;
   backface-visibility: visible;
   will-change: transform;
-  animation: rasta-logo-central-spin 10s linear infinite;
+  animation: rasta-logo-central-spin 8s linear infinite;
 }
 
 .rasta-logo-extrusion {
   position: absolute;
   inset: 0;
   display: block;
-  background-image: url('/rasta-logo.webp');
+  background-image: url('/hera-logo-v2.webp');
   background-repeat: no-repeat;
   background-position: center top;
   background-size: 100% auto;
@@ -212,7 +212,7 @@ input:disabled,
 @media (prefers-reduced-motion: reduce) {
   .rasta-logo-rotor {
     animation: none !important;
-    transform: none !important;
+    transform: perspective(900px) rotateY(-14deg) !important;
     will-change: auto;
   }
 }
