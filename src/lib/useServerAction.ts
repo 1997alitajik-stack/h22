@@ -8,8 +8,7 @@ export interface ActionState {
   message?: string;
 }
 
-/** Client bridge for server actions. Awaitable submission lets callers refresh/close
- * dialogs only after the server confirms success. */
+/** Client bridge for server actions. Every rejected action becomes a visible form error. */
 export function useServerAction<TState extends ActionState>(
   action: (prev: TState, formData: FormData) => Promise<TState>,
   initialState: TState,
@@ -18,23 +17,27 @@ export function useServerAction<TState extends ActionState>(
   const [pending, startTransition] = useTransition();
 
   function submitAndWait(formData: FormData): Promise<TState> {
-    return new Promise<TState>((resolve, reject) => {
+    return new Promise<TState>((resolve) => {
       startTransition(async () => {
         try {
           const result = await action(initialState, formData);
           setState(result);
           resolve(result);
         } catch (error) {
-          reject(error);
+          const failure = {
+            ...initialState,
+            ok: false,
+            error: error instanceof Error ? error.message : 'عملیات ناموفق بود. دوباره تلاش کنید.',
+          } as TState;
+          setState(failure);
+          resolve(failure);
         }
       });
     });
   }
 
   function submit(formData: FormData): void {
-    void submitAndWait(formData).catch((error: unknown) => {
-      console.error('[RASTA_ACTION] Server action rejected', error);
-    });
+    void submitAndWait(formData);
   }
 
   return [state, submit, pending, submitAndWait] as const;
