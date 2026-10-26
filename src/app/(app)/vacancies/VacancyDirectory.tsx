@@ -196,7 +196,7 @@ function CreateVacancyModal({
 
   return (
     <Modal open onClose={onClose} title="تعریف فرصت شغلی و ردیف جدید" size="lg">
-      <form action={formAction} className="flex max-h-[calc(90vh-8rem)] min-h-0 flex-col text-xs">
+      <form action={formAction} className="flex h-[calc(90vh-8rem)] max-h-[calc(90vh-8rem)] min-h-0 flex-col text-xs">
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-3">
           {state.error && (
             <p role="alert" className="rounded-[var(--radius-md)] border border-rose-200 bg-[var(--color-status-danger-bg)] p-3 font-medium text-rose-700">
