@@ -130,12 +130,17 @@ test.describe.serial('vacancy & candidacy lifecycle (admin)', () => {
 
   test('create vacancy (E2E-11) and link the test applicant', async ({ page }) => {
     await adminPage(page);
+    await page.goto('/organization');
+    await page.getByLabel('نام هلدینگ مادر').fill('ستاد سازمان (آزمون)');
+    await page.getByLabel('مدت بایگانی خودکار معرفی‌ها').selectOption('60');
+    await page.getByRole('button', { name: 'ذخیره تنظیمات هلدینگ' }).click();
+    await expect(page.getByRole('status').getByText('تنظیمات ذخیره شد.')).toBeVisible({ timeout: 10_000 });
+
     await page.goto('/vacancies');
     await page.getByRole('button', { name: 'تعریف موقعیت شغلی جدید' }).click();
 
     await page.getByLabel('عنوان موقعیت شغلی').fill(vacTitle);
     await page.getByLabel('محل تعریف فرصت').selectOption('PARENT');
-    await page.getByLabel('نام هلدینگ مادر').fill('ستاد سازمان (آزمون)');
     await page.getByLabel('شهر محل خدمت').fill('تهران');
     await page.getByLabel('حداقل سابقه کار (سال)').fill('3');
     await page.getByLabel('مهارت‌های الزامی (با ویرگول)').fill('AutoCAD');

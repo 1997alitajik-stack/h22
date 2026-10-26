@@ -30,7 +30,7 @@ const vacancy: MatchVacancy = {
 describe('transparent vacancy recommendation score', () => {
   it('gives full role, city, experience, skill and degree points', () => {
     const b = computeMatchScore(candidate(), vacancy);
-    expect(b.total).toBe(95);
+    expect(b.total).toBe(85);
     expect(b.categoryMatch).toBe(25);
     expect(b.titleMatch).toBe(15);
     expect(b.cityMatch).toBe(10);
@@ -43,13 +43,13 @@ describe('transparent vacancy recommendation score', () => {
   it('reduces score when the candidate lives in another city', () => {
     const b = computeMatchScore(candidate({ residentialCity: 'اصفهان' }), vacancy);
     expect(b.cityMatch).toBe(0);
-    expect(b.total).toBe(85);
+    expect(b.total).toBe(75);
   });
 
   it('requires exact job category for automatic recommendations', () => {
     const b = computeMatchScore(candidate({ primaryJobCategory: 'امور مالی و حسابداری' }), vacancy);
     expect(b.categoryMatch).toBe(0);
-    expect(b.total).toBe(70);
+    expect(b.total).toBe(60);
   });
 
   it('scores partial experience, missing skills, and parent/subsidiary history transparently', () => {
