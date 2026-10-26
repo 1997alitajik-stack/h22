@@ -17,6 +17,7 @@ import {
   Eye,
   UserPlus,
   UserRound,
+  LifeBuoy,
 } from 'lucide-react';
 import { BrandMark } from './BrandMark';
 import { FirstLoginTour } from './FirstLoginTour';
@@ -56,6 +57,10 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: 'گزارش‌ها',
     items: [{ href: '/reports', label: 'گزارش‌ها و آمار', icon: ShieldCheck }],
+  },
+  {
+    title: 'راهنما',
+    items: [{ href: '/support', label: 'پشتیبانی سامانه', icon: LifeBuoy }],
   },
   {
     title: 'مدیریت سامانه',

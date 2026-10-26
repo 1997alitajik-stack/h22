@@ -17,6 +17,14 @@ test.describe('authentication & access control', () => {
     await expect(page.getByRole('heading', { name: 'ورود به سامانه راستا' })).toBeVisible();
   });
 
+  test('unauthenticated visitors can open the public support form', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByRole('button', { name: /مشکل ورود دارید/ }).click();
+    await expect(page.getByLabel('نام و نام خانوادگی')).toBeVisible();
+    await expect(page.getByLabel('ایمیل برای معرفی درخواست')).toBeVisible();
+    await expect(page.getByLabel('شرح مشکل')).toBeVisible();
+  });
+
   test('wrong password shows a generic error and stays on login', async ({ page }) => {
     test.skip(!!skipIfMissing(), skipIfMissing() ?? '');
     await page.goto('/login');

@@ -531,6 +531,7 @@ export async function updateCandidacyStage(
     const message =
       error.message.includes('FORBIDDEN') ? 'اجازه انجام این عملیات را ندارید.'
       : error.message.includes('RECORD_NOT_FOUND') ? 'داوطلبی یافت نشد.'
+      : error.message.includes('VACANCY_ARCHIVED') ? 'این فرصت قبلاً بایگانی شده است؛ مرحله داوطلب قابل تغییر نیست.'
       : `خطا در تغییر مرحله: ${error.message}`;
     throw new Error(message);
   }

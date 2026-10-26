@@ -181,6 +181,44 @@ test.describe.serial('vacancy & candidacy lifecycle (admin)', () => {
     await expect(page.locator('select').first()).toHaveValue('SCREENING', { timeout: 15_000 });
     await logout(page);
   });
+
+  test('accepting a candidate finalizes and archives the vacancy with the assigned name', async ({ page }) => {
+    await adminPage(page);
+    await page.goto('/vacancies');
+    await page.getByRole('link', { name: new RegExp(vacTitle) }).first().click();
+
+    await page.getByRole('combobox', { name: new RegExp('تغییر مرحله') }).first().selectOption('ACCEPTED');
+    await page.getByRole('button', { name: 'ثبت' }).first().click();
+
+    await expect(page.getByText('این فرصت شغلی بایگانی شده است.')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/تخصیص نهایی به: آزمون داوطلب/)).toBeVisible();
+    await expect(page.getByText('فرد تخصیص‌یافته')).toBeVisible();
+    await logout(page);
+  });
+});
+
+
+test.describe('support ticket workflow', () => {
+  test.skip(() => !!skipIfMissing(), 'E2E accounts not configured');
+
+  test('user can create a support ticket and continue the conversation', async ({ page }) => {
+    await adminPage(page);
+    await page.goto('/support');
+    await page.getByLabel('موضوع کوتاه').fill('آزمون گردش کار پشتیبانی');
+    await page.getByLabel('شرح مشکل یا پرسش').fill('این یک پیام آزمایشی برای بررسی ثبت تیکت و پاسخ در سامانه است.');
+    await page.getByRole('button', { name: 'ثبت تیکت پشتیبانی' }).click();
+
+    const ticketLink = page.getByRole('link', { name: /مشاهده تیکت شماره/ }).first();
+    await expect(ticketLink).toBeVisible({ timeout: 15_000 });
+    await ticketLink.click();
+    await expect(page.getByRole('heading', { name: 'آزمون گردش کار پشتیبانی' })).toBeVisible();
+
+    const reply = 'پاسخ آزمایشی پشتیبانی برای تأیید گردش گفت‌وگو.';
+    await page.getByLabel('پاسخ یا توضیحات تکمیلی').fill(reply);
+    await page.getByRole('button', { name: 'ارسال پاسخ' }).click();
+    await expect(page.getByText(reply)).toBeVisible({ timeout: 15_000 });
+    await logout(page);
+  });
 });
 
 test.describe('admin screens render with live data', () => {
