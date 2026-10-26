@@ -3,7 +3,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { requireAdmin, requireUser } from '@/lib/auth';
-import { adminAudit } from '@/lib/audit';
+import { adminAudit, clientAudit } from '@/lib/audit';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import {
   authenticatedSupportTicketSchema,
@@ -34,7 +34,8 @@ function actionError(error: unknown, fallback: string) {
   if (raw.includes('INVALID_TICKET_LINK')) return 'پیوند پیگیری معتبر نیست؛ از پیوند دریافتی هنگام ثبت تیکت استفاده کنید.';
   if (raw.includes('RATE_LIMITED')) return 'برای این نشانی ایمیل در یک ساعت گذشته تعداد زیادی درخواست ثبت شده است؛ کمی بعد دوباره تلاش کنید.';
   if (raw.includes('INVALID_INPUT')) return 'اطلاعات واردشده معتبر نیست؛ فیلدها را بررسی کنید.';
-  return fallback + (raw ? ' ' + raw : '');
+  if (raw) console.error('[support-action] operation failed', { message: raw });
+  return fallback;
 }
 
 export async function createSupportTicketAction(
@@ -62,10 +63,15 @@ export async function createSupportTicketAction(
     const result = Array.isArray(data) ? data[0] : data;
     if (!result?.ticket_id) throw new Error('پاسخ ثبت تیکت کامل نبود.');
 
-    await adminAudit(user, 'SUPPORT', 'ثبت تیکت پشتیبانی', {
+    const auditOptions = {
       recordIdentifier: result.ticket_id,
       details: parsed.data.category + ' · ' + parsed.data.subject,
-    });
+    };
+    if (user.role === 'ADMIN') {
+      await adminAudit(user, 'SUPPORT_TICKET', 'ثبت تیکت پشتیبانی', auditOptions);
+    } else {
+      await clientAudit(user, 'SUPPORT_TICKET', 'ثبت تیکت پشتیبانی', auditOptions);
+    }
     revalidatePath('/support');
     return {
       ok: true,
@@ -97,9 +103,12 @@ export async function replySupportTicketAction(
     });
     if (error) throw error;
 
-    await adminAudit(user, 'SUPPORT', 'ارسال پاسخ در تیکت پشتیبانی', {
-      recordIdentifier: parsed.data.ticketId,
-    });
+    const auditOptions = { recordIdentifier: parsed.data.ticketId };
+    if (user.role === 'ADMIN') {
+      await adminAudit(user, 'SUPPORT_REPLY', 'ارسال پاسخ در تیکت پشتیبانی', auditOptions);
+    } else {
+      await clientAudit(user, 'SUPPORT_REPLY', 'ارسال پاسخ در تیکت پشتیبانی', auditOptions);
+    }
     revalidatePath('/support');
     revalidatePath('/support/' + parsed.data.ticketId);
     return { ok: true, message: 'پاسخ شما ثبت شد.' };
@@ -127,7 +136,7 @@ export async function updateSupportTicketStatusAction(
     });
     if (error) throw error;
 
-    await adminAudit(user, 'SUPPORT', 'تغییر وضعیت تیکت پشتیبانی', {
+    await adminAudit(user, 'SUPPORT_STATUS', 'تغییر وضعیت تیکت پشتیبانی', {
       recordIdentifier: parsed.data.ticketId,
       details: parsed.data.status,
     });

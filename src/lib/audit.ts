@@ -54,10 +54,10 @@ export function adminAudit(
   return logAudit(user, { channel: 'ADMIN_SECURITY', category, summary, ...opts });
 }
 
-/** Client-channel shortcut: LOW severity, whitelisted categories only. */
+/** Client-channel shortcut: LOW severity, with categories whitelisted by the database. */
 export function clientAudit(
   user: SessionUser,
-  category: 'VIEW_RESUME' | 'SEARCH_DIRECTORY' | 'EXPORT_LIST',
+  category: 'VIEW_RESUME' | 'SEARCH_DIRECTORY' | 'EXPORT_LIST' | 'SUPPORT_TICKET' | 'SUPPORT_REPLY',
   summary: string,
   opts: Omit<AuditEventInput, 'channel' | 'category' | 'summary'> = {},
 ) {
