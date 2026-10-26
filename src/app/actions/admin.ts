@@ -9,6 +9,7 @@ import {
   linkCandidacySchema,
   organizationSchema,
   organizationUpdateSchema,
+  organizationSettingsSchema,
   deleteOrganizationSchema,
   createProjectSchema,
   updateProjectSchema,
@@ -22,7 +23,14 @@ import {
   vacancyFormSchema,
   vocabUpdateSchema,
 } from '@/lib/validation';
-import { createVacancy, linkCandidacy, updateCandidacyStage, updateVacancyStatus } from '@/server/vacancies';
+import {
+  archiveCandidacy,
+  archiveVacancy,
+  createVacancy,
+  linkCandidacy,
+  updateCandidacyStage,
+  updateVacancyStatus,
+} from '@/server/vacancies';
 import {
   createUserAccount,
   updateUserAccount,
@@ -32,8 +40,17 @@ import {
   updateUserRole,
   updateUserStatus,
 } from '@/server/users';
-import { createOrganization, updateOrganization, deleteOrganization, createProject, updateProject, deleteProject, updateVocabulary } from '@/server/misc';
-import type { VacancyListRow } from '@/types';
+import {
+  createOrganization,
+  updateOrganization,
+  deleteOrganization,
+  createProject,
+  updateProject,
+  deleteProject,
+  updateVocabulary,
+  updateOrganizationSettings,
+} from '@/server/misc';
+import type { SessionUser, VacancyListRow } from '@/types';
 
 export interface SimpleActionState {
   ok: boolean;
@@ -41,11 +58,106 @@ export interface SimpleActionState {
   message?: string;
 }
 
+export async function updateOrganizationSettingsAction(
+  _prev: SimpleActionState,
+  formData: FormData,
+): Promise<SimpleActionState> {
+  try {
+    const user = await requireAdmin('/organization');
+    const parsed = organizationSettingsSchema.safeParse({
+      parentOrganizationName: formData.get('parentOrganizationName'),
+      autoArchiveEnabled: formData.get('autoArchiveEnabled') === 'on',
+      autoArchiveDays: formData.get('autoArchiveDays'),
+    });
+    if (!parsed.success) {
+      const first = Object.values(parsed.error.flatten().fieldErrors)[0]?.[0];
+      return { ok: false, error: first ?? 'تنظیمات معتبر نیست.' };
+    }
+    await updateOrganizationSettings(user, {
+      parentName: parsed.data.parentOrganizationName,
+      autoArchiveEnabled: parsed.data.autoArchiveEnabled,
+      autoArchiveDays: parsed.data.autoArchiveDays,
+    });
+    await adminAudit(user, 'ORGANIZATION', 'به‌روزرسانی نام هلدینگ و سیاست بایگانی خودکار', {
+      details: 'مدت عدم فعالیت: ' + parsed.data.autoArchiveDays + ' روز؛ بایگانی خودکار: ' + (parsed.data.autoArchiveEnabled ? 'فعال' : 'غیرفعال'),
+    });
+    revalidatePath('/organization');
+    revalidatePath('/vacancies');
+    return { ok: true, message: 'تنظیمات ذخیره شد.' };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'ذخیره تنظیمات ناموفق بود.' };
+  }
+}
+
+export async function archiveVacancyAction(
+  _prev: SimpleActionState,
+  formData: FormData,
+): Promise<SimpleActionState> {
+  try {
+    const user = await requireAdmin('/vacancies');
+    const vacancyId = String(formData.get('vacancyId') ?? '');
+    const action = String(formData.get('action') ?? '');
+    const reason = String(formData.get('reason') ?? '').trim();
+    if (!/^[0-9a-fA-F-]{36}$/.test(vacancyId)) return { ok: false, error: 'شناسه فرصت شغلی معتبر نیست.' };
+    if (action !== 'ARCHIVE' && action !== 'RESTORE') return { ok: false, error: 'عملیات بایگانی معتبر نیست.' };
+    if (reason.length > 300) return { ok: false, error: 'علت بایگانی حداکثر ۳۰۰ نویسه است.' };
+
+    await archiveVacancy(user, vacancyId, action === 'ARCHIVE', reason);
+    await adminAudit(
+      user,
+      'VACANCY',
+      action === 'ARCHIVE' ? 'بایگانی فرصت شغلی' : 'بازگردانی فرصت شغلی از بایگانی',
+      { recordIdentifier: vacancyId, details: reason || undefined },
+    );
+    revalidatePath('/vacancies');
+    revalidatePath('/vacancies/' + vacancyId);
+    return { ok: true, message: action === 'ARCHIVE' ? 'فرصت شغلی بایگانی شد.' : 'فرصت شغلی بازگردانی شد.' };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'عملیات بایگانی ناموفق بود.' };
+  }
+}
+
+export async function archiveCandidacyAction(
+  _prev: SimpleActionState,
+  formData: FormData,
+): Promise<SimpleActionState> {
+  try {
+    const user = await requireAdmin('/vacancies');
+    const candidacyId = String(formData.get('candidacyId') ?? '');
+    const vacancyId = String(formData.get('vacancyId') ?? '');
+    const action = String(formData.get('action') ?? '');
+    const reason = String(formData.get('reason') ?? '').trim();
+    if (!/^[0-9a-fA-F-]{36}$/.test(candidacyId) || !/^[0-9a-fA-F-]{36}$/.test(vacancyId)) {
+      return { ok: false, error: 'شناسه معرفی معتبر نیست.' };
+    }
+    if (action !== 'ARCHIVE' && action !== 'RESTORE') return { ok: false, error: 'عملیات بایگانی معتبر نیست.' };
+    if (reason.length > 300) return { ok: false, error: 'علت بایگانی حداکثر ۳۰۰ نویسه است.' };
+
+    await archiveCandidacy(user, candidacyId, vacancyId, action === 'ARCHIVE', reason);
+    await adminAudit(
+      user,
+      'VACANCY',
+      action === 'ARCHIVE' ? 'بایگانی معرفی متقاضی' : 'بازگردانی معرفی متقاضی از بایگانی',
+      { recordIdentifier: candidacyId, details: reason || undefined },
+    );
+    revalidatePath('/vacancies/' + vacancyId);
+    revalidatePath('/vacancies');
+    return { ok: true, message: action === 'ARCHIVE' ? 'معرفی متقاضی بایگانی شد.' : 'معرفی متقاضی بازگردانی شد.' };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'عملیات معرفی ناموفق بود.' };
+  }
+}
+
 export async function createVacancyAction(
   _prev: SimpleActionState,
   formData: FormData,
 ): Promise<SimpleActionState> {
-  const user = await requireAdmin('/vacancies');
+  let user: SessionUser;
+  try {
+    user = await requireAdmin('/vacancies');
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'اجازه ثبت فرصت شغلی را ندارید.' };
+  }
 
   const parsed = vacancyFormSchema.safeParse({
     title: formData.get('title'),
@@ -98,7 +210,12 @@ export async function linkCandidacyAction(
   _prev: SimpleActionState,
   formData: FormData,
 ): Promise<SimpleActionState> {
-  const user = await requireAdmin('/vacancies');
+  let user: SessionUser;
+  try {
+    user = await requireAdmin('/vacancies');
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'اجازه معرفی متقاضی را ندارید.' };
+  }
   const parsed = linkCandidacySchema.safeParse({
     vacancyId: formData.get('vacancyId'),
     applicantId: formData.get('applicantId'),
