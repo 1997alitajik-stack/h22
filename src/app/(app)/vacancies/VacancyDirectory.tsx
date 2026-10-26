@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useMemo, useState } from 'react';
-import { Briefcase, Building2, MapPin, Plus, Search, Users } from 'lucide-react';
+import { Archive, Briefcase, Building2, MapPin, Plus, Search, Users } from 'lucide-react';
 import { createVacancyAction, type SimpleActionState } from '@/app/actions/admin';
 import { Modal } from '@/components/ui/Modal';
 import { Button, EmptyState, Field, inputClass, selectClass } from '@/components/ui/Primitives';
 import { VacancyStatusBadge } from '@/components/ui/Badges';
+import { VacancyArchiveControl } from './VacancyArchiveControl';
 import { DEGREE_LABELS, EMPLOYMENT_TYPE_LABELS } from '@/lib/domain/labels';
 import { toPersianDigits } from '@/lib/persian';
 import type { SessionUser, VacancyListRow } from '@/types';
@@ -26,16 +27,19 @@ export function VacancyDirectory({
   cities,
   categories,
   organizations,
+  parentOrganizationName,
 }: {
   user: SessionUser;
   vacancies: VacancyListRow[];
   cities: string[];
   categories: string[];
   organizations: VacancyOrganization[];
+  parentOrganizationName: string;
 }) {
   const isAdmin = user.role === 'ADMIN';
   const [q, setQ] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [archiveFilter, setArchiveFilter] = useState<'ACTIVE' | 'ARCHIVED'>('ACTIVE');
   const [cityFilter, setCityFilter] = useState('ALL');
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -50,11 +54,12 @@ export function VacancyDirectory({
           );
         return (
           matchesQ &&
+          (archiveFilter === 'ARCHIVED' ? Boolean(v.archived_at) : !v.archived_at) &&
           (statusFilter === 'ALL' || v.status === statusFilter) &&
           (cityFilter === 'ALL' || v.city === cityFilter)
         );
       }),
-    [vacancies, q, statusFilter, cityFilter],
+    [vacancies, q, statusFilter, archiveFilter, cityFilter],
   );
 
   return (
@@ -88,11 +93,15 @@ export function VacancyDirectory({
         </div>
         <div className="flex items-center gap-2">
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={selectClass} aria-label="فیلتر وضعیت">
-            <option value="ALL">همه وضعیت‌ها</option>
+            <option value="ALL">همه وضعیت‌های فرصت</option>
             <option value="OPEN">پذیرش فعال</option>
             <option value="IN_PROGRESS">در جریان ارزیابی</option>
             <option value="FILLED">تکمیل‌شده</option>
             <option value="CANCELLED">لغو‌شده</option>
+          </select>
+          <select value={archiveFilter} onChange={(e) => setArchiveFilter(e.target.value as 'ACTIVE' | 'ARCHIVED')} className={selectClass} aria-label="فیلتر بایگانی">
+            <option value="ACTIVE">فرصت‌های فعال و جاری</option>
+            <option value="ARCHIVED">بایگانی فرصت‌ها</option>
           </select>
           <select value={cityFilter} onChange={(e) => setCityFilter(e.target.value)} className={selectClass} aria-label="فیلتر شهر">
             <option value="ALL">همه شهرها</option>
@@ -107,22 +116,24 @@ export function VacancyDirectory({
         <div className="rounded-[var(--radius-lg)] border border-slate-200 bg-white">
           <EmptyState
             icon={<Briefcase className="h-5 w-5" aria-hidden />}
-            title="هیچ فرصت شغلی یافت نشد"
-            description="فیلترها را تغییر دهید یا نخستین ردیف استخدامی را تعریف کنید."
+            title={archiveFilter === 'ARCHIVED' ? 'فرصت بایگانی‌شده‌ای یافت نشد' : 'هیچ فرصت شغلی یافت نشد'}
+            description={archiveFilter === 'ARCHIVED' ? 'فرصت‌ها پس از بایگانی در این بخش باقی می‌مانند و هر زمان می‌توان آن‌ها را بازگرداند.' : 'فیلترها را تغییر دهید یا نخستین ردیف استخدامی را تعریف کنید.'}
           />
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((vac) => (
-            <Link
-              key={vac.id}
-              href={`/vacancies/${vac.id}`}
-              className="flex flex-col justify-between rounded-[var(--radius-lg)] border border-slate-200 bg-white p-5 transition-soft hover:border-teal-400 hover:shadow-sm"
-            >
+            <article key={vac.id} className={`flex flex-col justify-between rounded-[var(--radius-lg)] border bg-white p-5 transition-soft hover:shadow-sm ${vac.archived_at ? 'border-amber-200' : 'border-slate-200 hover:border-teal-400'}`}>
+              <Link
+                href={`/vacancies/${vac.id}`}
+                className="block flex-1"
+              >
               <div>
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <span className="dir-ltr font-mono text-[11px] text-slate-400">{vac.code}</span>
-                  <VacancyStatusBadge status={vac.status} />
+                  {vac.archived_at
+                    ? <span className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800"><Archive className="h-3 w-3" aria-hidden /> بایگانی</span>
+                    : <VacancyStatusBadge status={vac.status} />}
                 </div>
                 <h2 className="mb-1.5 text-sm font-bold text-slate-900">{vac.title}</h2>
                 <p className="mb-1 flex items-center gap-1.5 truncate text-xs text-slate-600">
@@ -145,7 +156,13 @@ export function VacancyDirectory({
                 </span>
                 <span className="text-[11px] text-slate-400">{EMPLOYMENT_TYPE_LABELS[vac.employment_type]}</span>
               </div>
-            </Link>
+              </Link>
+              {isAdmin && (
+                <div className="mt-3 border-t border-slate-100 pt-3">
+                  <VacancyArchiveControl vacancyId={vac.id} archived={Boolean(vac.archived_at)} archiveReason={vac.archive_reason} compact />
+                </div>
+              )}
+            </article>
           ))}
         </div>
       )}
@@ -155,6 +172,7 @@ export function VacancyDirectory({
           cities={cities}
           categories={categories}
           organizations={organizations}
+          parentOrganizationName={parentOrganizationName}
           onClose={() => setCreateOpen(false)}
         />
       )}
@@ -166,11 +184,13 @@ function CreateVacancyModal({
   cities,
   categories,
   organizations,
+  parentOrganizationName,
   onClose,
 }: {
   cities: string[];
   categories: string[];
   organizations: VacancyOrganization[];
+  parentOrganizationName: string;
   onClose: () => void;
 }) {
   const [state, formAction, pending] = useActionState(createVacancyAction, initial);
@@ -178,7 +198,6 @@ function CreateVacancyModal({
   const [organizationType, setOrganizationType] = useState<'PARENT' | 'SUBSIDIARY'>('SUBSIDIARY');
   const [organizationId, setOrganizationId] = useState('');
   const [projectId, setProjectId] = useState('');
-  const [parentOrganizationName, setParentOrganizationName] = useState('');
   const [city, setCity] = useState('');
 
   const isParent = organizationType === 'PARENT';
@@ -196,14 +215,8 @@ function CreateVacancyModal({
 
   return (
     <Modal open onClose={onClose} title="تعریف فرصت شغلی و ردیف جدید" size="lg">
-      <form action={formAction} className="flex h-[calc(90vh-8rem)] max-h-[calc(90vh-8rem)] min-h-0 flex-col text-xs">
+      <form action={formAction} className="flex h-[calc(82vh-7rem)] max-h-[calc(90vh-8rem)] min-h-0 flex-col text-xs">
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-3">
-          {state.error && (
-            <p role="alert" className="rounded-[var(--radius-md)] border border-rose-200 bg-[var(--color-status-danger-bg)] p-3 font-medium text-rose-700">
-              {state.error}
-            </p>
-          )}
-
           <p className="rounded-[var(--radius-md)] border border-teal-100 bg-teal-50/70 p-3 text-[11px] leading-5 text-teal-900">
             ابتدا مشخص کنید فرصت مربوط به هلدینگ مادر است یا یکی از شرکت‌های زیرمجموعه. پروژه‌ها فقط از میان پروژه‌های ثبت‌شده برای همان شرکت انتخاب می‌شوند.
           </p>
@@ -237,7 +250,9 @@ function CreateVacancyModal({
                 required
               >
                 <option value="SUBSIDIARY">یکی از شرکت‌های زیرمجموعه</option>
-                <option value="PARENT">هلدینگ مادر</option>
+                <option value="PARENT" disabled={!parentOrganizationName.trim()}>
+                  {parentOrganizationName.trim() ? 'هلدینگ مادر' : 'هلدینگ مادر (ابتدا نام را در ساختار سازمانی ثبت کنید)'}
+                </option>
               </select>
             </Field>
 
@@ -270,7 +285,7 @@ function CreateVacancyModal({
               </Field>
             )}
 
-            <Field label={isParent ? 'نام هلدینگ مادر' : 'نام شرکت انتخاب‌شده'} htmlFor="v-orgname" required>
+            <Field label={isParent ? 'نام هلدینگ مادر (ثبت‌شده در ساختار)' : 'نام شرکت انتخاب‌شده'} htmlFor="v-orgname" required>
               <input
                 id="v-orgname"
                 name="organizationName"
@@ -279,12 +294,10 @@ function CreateVacancyModal({
                 maxLength={200}
                 className={inputClass}
                 value={isParent ? parentOrganizationName : (selectedOrganization?.name ?? '')}
-                readOnly={!isParent}
-                onChange={(event) => {
-                  if (isParent) setParentOrganizationName(event.target.value);
-                }}
-                placeholder={isParent ? 'نام واقعی هلدینگ مادر را وارد کنید' : 'ابتدا شرکت زیرمجموعه را انتخاب کنید'}
+                readOnly
+                placeholder={isParent ? 'ابتدا نام هلدینگ را در ساختار سازمانی ثبت کنید' : 'ابتدا شرکت زیرمجموعه را انتخاب کنید'}
               />
+              {isParent && <span className="block text-[10px] text-slate-500">نام هلدینگ فقط یک‌بار در «ساختار سازمانی» تعریف می‌شود.</span>}
             </Field>
 
             {!isParent && (
@@ -381,7 +394,12 @@ function CreateVacancyModal({
 
         <input type="hidden" name="status" value="OPEN" />
         {!isParent && <input type="hidden" name="projectName" value={selectedProject?.name ?? ''} />}
-        <div className="flex shrink-0 items-center justify-start gap-3 border-t border-slate-100 bg-white pt-4">
+        {state.error && (
+          <p role="alert" className="mt-2 shrink-0 rounded-[var(--radius-md)] border border-rose-200 bg-rose-50 p-2.5 text-[11px] font-medium text-rose-800">
+            {state.error}
+          </p>
+        )}
+        <div className="flex shrink-0 items-center justify-start gap-3 border-t border-slate-100 bg-white pt-3">
           <Button type="submit" loading={pending}>
             {pending ? 'در حال ایجاد…' : 'ایجاد موقعیت شغلی'}
           </Button>
