@@ -32,7 +32,7 @@ function ThreeDimensionalLogo({ depth, priority = false }: { depth: number; prio
       })}
 
       <Image
-        src="/rasta-logo.webp"
+        src="/hera-logo-v2.webp"
         alt=""
         width={LOGO_WIDTH}
         height={LOGO_HEIGHT}
@@ -43,7 +43,7 @@ function ThreeDimensionalLogo({ depth, priority = false }: { depth: number; prio
       />
 
       <Image
-        src="/rasta-logo.webp"
+        src="/hera-logo-v2.webp"
         alt=""
         width={LOGO_WIDTH}
         height={LOGO_HEIGHT}
@@ -85,7 +85,7 @@ export function BrandLogo({
         role="img"
         aria-label="مؤسسه حرا"
       >
-        <ThreeDimensionalLogo depth={12} priority={size === 'xl' || size === 'lg'} />
+        <ThreeDimensionalLogo depth={16} priority={size === 'xl' || size === 'lg'} />
       </div>
     );
 
@@ -100,7 +100,7 @@ export function BrandLogo({
       role="img"
       aria-label="نشان مؤسسه حرا"
     >
-      <ThreeDimensionalLogo depth={5} />
+      <ThreeDimensionalLogo depth={7} />
     </div>
   );
 }
