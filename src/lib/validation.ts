@@ -226,6 +226,12 @@ export const noteSchema = z.object({
   isConfidential: z.boolean().default(false),
 });
 
+export const organizationSettingsSchema = z.object({
+  parentOrganizationName: z.string().trim().min(2, 'نام هلدینگ مادر الزامی است').max(200),
+  autoArchiveEnabled: z.boolean(),
+  autoArchiveDays: z.coerce.number().int().min(15, 'حداقل مدت بایگانی ۱۵ روز است').max(365, 'حداکثر مدت بایگانی ۳۶۵ روز است'),
+});
+
 export const organizationSchema = z.object({
   nameFa: z.string().trim().min(2, 'نام شرکت الزامی است').max(200),
   code: z.string().trim().min(2).max(60),

@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import type {
   AuditRow,
   OrganizationRow,
+  OrganizationSettings,
   SessionUser,
   Vocabularies,
 } from '@/types';
@@ -29,6 +30,39 @@ export async function listOrganizations(user: SessionUser): Promise<Organization
     project_count: byOrg.get(o.id)?.length ?? 0,
     projects: byOrg.get(o.id) ?? [],
   }));
+}
+
+export async function getOrganizationSettings(): Promise<OrganizationSettings> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('organization_settings')
+    .select('id, parent_name, auto_archive_enabled, auto_archive_days, updated_at')
+    .eq('id', 1)
+    .maybeSingle();
+  if (error) throw new Error('بارگذاری تنظیمات هلدینگ ناموفق بود: ' + error.message);
+  return data ?? {
+    id: 1,
+    parent_name: '',
+    auto_archive_enabled: true,
+    auto_archive_days: 60,
+    updated_at: null,
+  };
+}
+
+export async function updateOrganizationSettings(
+  user: SessionUser,
+  input: { parentName: string; autoArchiveEnabled: boolean; autoArchiveDays: number },
+): Promise<void> {
+  if (user.role !== 'ADMIN') throw new Error('اجازه تغییر تنظیمات ساختار سازمانی را ندارید.');
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from('organization_settings').upsert({
+    id: 1,
+    parent_name: input.parentName.trim(),
+    auto_archive_enabled: input.autoArchiveEnabled,
+    auto_archive_days: input.autoArchiveDays,
+    updated_by: user.id,
+  }, { onConflict: 'id' });
+  if (error) throw new Error('ذخیره تنظیمات هلدینگ ناموفق بود: ' + error.message);
 }
 
 export async function createOrganization(

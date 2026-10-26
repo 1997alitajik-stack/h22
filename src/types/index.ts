@@ -194,10 +194,15 @@ export interface CandidacyRow {
 
 export interface MatchBreakdown {
   base: number;
+  categoryMatch: number;
+  titleMatch: number;
   cityMatch: number;
   experienceMatch: number;
   priorityBonus: number;
+  organizationMatch: number;
   skillsMatch: number;
+  preferredCityMatch: number;
+  degreeMatch: number;
   matchedSkills: string[];
   missingSkills: string[];
   total: number;
@@ -256,8 +261,11 @@ export interface VacancyListRow {
   title: string;
   category: string;
   organization_type: OrgType;
+  organization_id: string | null;
   organization_name: string;
   project_name: string | null;
+  archived_at: string | null;
+  archive_reason: string | null;
   city: string;
   open_positions_count: number;
   employment_type: EmploymentType;
@@ -287,7 +295,31 @@ export interface VacancyDetail extends VacancyListRow {
     notes: string | null;
     match_score: number | null;
     match_breakdown: MatchBreakdown | null;
+    archived_at: string | null;
+    archive_reason: string | null;
   }[];
+}
+
+export interface VacancyApplicantOption {
+  id: string;
+  public_code: string;
+  full_name: string;
+  primary_job_title: string;
+  primary_job_category: string;
+  residential_city: string | null;
+  years_of_experience: number;
+  group_priority: GroupPriority;
+  match_score: number;
+  match_breakdown: MatchBreakdown;
+  is_recommended: boolean;
+}
+
+export interface OrganizationSettings {
+  id: number;
+  parent_name: string;
+  auto_archive_enabled: boolean;
+  auto_archive_days: number;
+  updated_at: string | null;
 }
 
 export interface OrganizationRow {
