@@ -8,8 +8,9 @@ const APPLICANT_LIST_COLUMNS = `
   group_priority_reason, recruitment_status, completeness, created_at
 `;
 const VACANCY_LIST_COLUMNS = `
-  id, code, title, category, organization_type, organization_name, project_name, city,
-  open_positions_count, employment_type, min_years_experience, required_skills, status, opened_at
+  id, code, title, category, organization_type, organization_id, organization_name, project_name, city,
+  open_positions_count, employment_type, min_years_experience, required_skills, status, opened_at,
+  archived_at, archive_reason
 `;
 
 function tally<T>(rows: T[] | null, pick: (row: T) => string | null | undefined) {
