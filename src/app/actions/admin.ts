@@ -49,22 +49,22 @@ export async function createVacancyAction(
 
   const parsed = vacancyFormSchema.safeParse({
     title: formData.get('title'),
-    code: formData.get('code'),
+    code: formData.get('code') || undefined,
     category: formData.get('category'),
     organizationType: formData.get('organizationType'),
     organizationId: formData.get('organizationId') || null,
-    organizationName: formData.get('organizationName'),
-    projectName: formData.get('projectName'),
+    organizationName: formData.get('organizationName') ?? '',
+    projectId: formData.get('projectId') || null,
     city: formData.get('city'),
     openPositionsCount: formData.get('openPositionsCount'),
     employmentType: formData.get('employmentType'),
     requiredDegree: formData.get('requiredDegree') || null,
     minYearsExperience: formData.get('minYearsExperience'),
-    requiredSkillsCsv: formData.get('requiredSkillsCsv'),
-    preferredSkillsCsv: formData.get('preferredSkillsCsv'),
-    description: formData.get('description'),
-    salaryRange: formData.get('salaryRange'),
-    status: formData.get('status'),
+    requiredSkillsCsv: formData.get('requiredSkillsCsv') ?? '',
+    preferredSkillsCsv: formData.get('preferredSkillsCsv') ?? '',
+    description: formData.get('description') ?? '',
+    salaryRange: formData.get('salaryRange') ?? '',
+    status: formData.get('status') || 'OPEN',
   });
   if (!parsed.success) {
     const flat = parsed.error.flatten().fieldErrors;
