@@ -10,6 +10,7 @@ const PAGES: { path: string; heading: RegExp | string }[] = [
   { path: '/', heading: T.dashboardHeading },
   { path: '/applicants', heading: T.applicantsHeading },
   { path: '/vacancies', heading: T.vacanciesHeading },
+  { path: '/vacancies/archive', heading: 'بایگانی فرصت‌های شغلی' },
   { path: '/reports', heading: T.reportsHeading },
   { path: '/organization', heading: T.orgHeading },
   { path: '/users', heading: T.usersHeading },

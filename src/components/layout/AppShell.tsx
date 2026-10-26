@@ -18,6 +18,7 @@ import {
   UserPlus,
   UserRound,
   LifeBuoy,
+  Archive,
 } from 'lucide-react';
 import { BrandMark } from './BrandMark';
 import { FirstLoginTour } from './FirstLoginTour';
@@ -46,6 +47,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/applicants', label: 'بانک متقاضیان', icon: Users },
       { href: '/vacancies', label: 'فرصت‌های شغلی', icon: Briefcase },
+      { href: '/vacancies/archive', label: 'بایگانی فرصت‌ها', icon: Archive },
     ],
   },
   {
@@ -74,6 +76,10 @@ const NAV_GROUPS: NavGroup[] = [
 
 function isActivePath(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/';
+  if (href === '/vacancies') {
+    return (pathname === '/vacancies' || pathname.startsWith('/vacancies/')) &&
+      !pathname.startsWith('/vacancies/archive');
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

@@ -193,6 +193,13 @@ test.describe.serial('vacancy & candidacy lifecycle (admin)', () => {
     await expect(page.getByText('این فرصت شغلی بایگانی شده است.')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/تخصیص نهایی به: آزمون داوطلب/)).toBeVisible();
     await expect(page.getByText('فرد تخصیص‌یافته')).toBeVisible();
+
+    // The completed vacancy must remain discoverable in the dedicated archive area.
+    await page.goto('/vacancies/archive');
+    await expect(page.getByRole('heading', { name: 'بایگانی فرصت‌های شغلی' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: vacTitle })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/علت بایگانی: تخصیص نهایی به: آزمون داوطلب/)).toBeVisible();
+
     await logout(page);
   });
 });
