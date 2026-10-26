@@ -125,7 +125,7 @@ export interface VacancyFormInput {
   organizationType: 'PARENT' | 'SUBSIDIARY';
   organizationId?: string | null;
   organizationName: string;
-  projectName?: string;
+  projectId?: string | null;
   city: string;
   openPositionsCount: number;
   employmentType: VacancyListRow['employment_type'];
@@ -144,6 +144,60 @@ export async function createVacancy(user: SessionUser, input: VacancyFormInput):
     input.code?.trim() ||
     `VAC-${Date.now().toString(36).toUpperCase()}`;
 
+  let organizationId = input.organizationId ?? null;
+  let organizationName = input.organizationName.trim();
+  let projectName: string | null = null;
+  let city = input.city.trim();
+
+  if (input.organizationType === 'PARENT') {
+    if (organizationId || input.projectId) {
+      throw new Error('فرصت هلدینگ مادر نمی‌تواند به شرکت یا پروژه زیرمجموعه متصل باشد.');
+    }
+  } else {
+    if (!organizationId) {
+      throw new Error('برای ثبت فرصت شرکت زیرمجموعه، ابتدا شرکت را انتخاب کنید.');
+    }
+
+    const { data: organization, error: organizationError } = await supabase
+      .from('organizations')
+      .select('id, name_fa, status')
+      .eq('id', organizationId)
+      .maybeSingle();
+
+    if (organizationError) {
+      throw new Error(`بررسی شرکت انتخاب‌شده ناموفق بود: ${organizationError.message}`);
+    }
+    if (!organization || organization.status !== 'ACTIVE') {
+      throw new Error('شرکت انتخاب‌شده وجود ندارد یا غیرفعال است. فهرست شرکت‌ها را تازه‌سازی کنید.');
+    }
+
+    // The authoritative organization label comes from the database, not the browser.
+    organizationName = organization.name_fa;
+
+    if (input.projectId) {
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .select('id, name, organization_id, city, status')
+        .eq('id', input.projectId)
+        .maybeSingle();
+
+      if (projectError) {
+        throw new Error(`بررسی پروژه انتخاب‌شده ناموفق بود: ${projectError.message}`);
+      }
+      if (!project || project.organization_id !== organizationId) {
+        throw new Error('پروژه انتخاب‌شده متعلق به این شرکت نیست. شرکت و پروژه را دوباره انتخاب کنید.');
+      }
+      if (project.status !== 'ACTIVE' && project.status !== 'PLANNING') {
+        throw new Error('فقط پروژه‌های فعال یا در حال برنامه‌ریزی برای فرصت جدید قابل انتخاب هستند.');
+      }
+
+      projectName = project.name;
+      // Prefer the registered project city so a vacancy cannot accidentally be
+      // attached to a project in one city while being advertised in another.
+      if (project.city?.trim()) city = project.city.trim();
+    }
+  }
+
   const { data, error } = await supabase
     .from('vacancies')
     .insert({
@@ -151,10 +205,10 @@ export async function createVacancy(user: SessionUser, input: VacancyFormInput):
       title: input.title,
       category: input.category,
       organization_type: input.organizationType,
-      organization_id: input.organizationId ?? null,
-      organization_name: input.organizationName,
-      project_name: input.projectName || null,
-      city: input.city,
+      organization_id: organizationId,
+      organization_name: organizationName,
+      project_name: projectName,
+      city,
       open_positions_count: input.openPositionsCount,
       employment_type: input.employmentType,
       required_degree: (input.requiredDegree || null) as VacancyDetail['required_degree'],
