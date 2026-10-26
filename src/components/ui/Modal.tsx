@@ -44,9 +44,9 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className={`w-full ${widths[size]} max-h-[90vh] overflow-hidden rounded-[var(--radius-lg)] border border-slate-200 bg-white shadow-xl`}
+        className={`flex w-full ${widths[size]} max-h-[90vh] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-slate-200 bg-white shadow-xl`}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-3.5">
           <h2 className="text-sm font-bold text-slate-900">{title}</h2>
           <button
             type="button"
@@ -57,7 +57,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
             <X className="h-4.5 w-4.5" aria-hidden />
           </button>
         </div>
-        <div className="max-h-[calc(90vh-56px)] overflow-y-auto p-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div>
       </div>
     </div>
   );

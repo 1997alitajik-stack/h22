@@ -20,7 +20,15 @@ export default async function VacanciesPage() {
       vacancies={vacancies}
       cities={vocab.cities}
       categories={vocab.job_categories}
-      organizations={organizations.map((o) => ({ id: o.id, name: o.name_fa }))}
+      organizations={organizations
+        .filter((o) => o.status === 'ACTIVE')
+        .map((o) => ({
+          id: o.id,
+          name: o.name_fa,
+          projects: o.projects
+            .filter((project) => project.status === 'ACTIVE' || project.status === 'PLANNING')
+            .map((project) => ({ id: project.id, name: project.name, city: project.city })),
+        }))}
     />
   );
 }

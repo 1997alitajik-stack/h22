@@ -134,7 +134,8 @@ test.describe.serial('vacancy & candidacy lifecycle (admin)', () => {
     await page.getByRole('button', { name: 'تعریف موقعیت شغلی جدید' }).click();
 
     await page.getByLabel('عنوان موقعیت شغلی').fill(vacTitle);
-    await page.getByLabel('نام نمایشی سازمان').fill('ستاد سازمان (آزمون)');
+    await page.getByLabel('محل تعریف فرصت').selectOption('PARENT');
+    await page.getByLabel('نام هلدینگ مادر').fill('ستاد سازمان (آزمون)');
     await page.getByLabel('شهر محل خدمت').fill('تهران');
     await page.getByLabel('حداقل سابقه کار (سال)').fill('3');
     await page.getByLabel('مهارت‌های الزامی (با ویرگول)').fill('AutoCAD');

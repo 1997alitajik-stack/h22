@@ -157,25 +157,56 @@ export const verifyEmploymentSchema = z.object({
   notes: z.string().trim().max(2000).default(''),
 });
 
-export const vacancyFormSchema = z.object({
-  title: z.string().trim().min(2, 'عنوان الزامی است').max(200),
-  code: z.string().trim().max(60).optional(),
-  category: z.string().trim().min(1, 'حوزه شغلی الزامی است').max(150),
-  organizationType: z.enum(['PARENT', 'SUBSIDIARY']),
-  organizationId: z.string().uuid().optional().nullable(),
-  organizationName: z.string().trim().max(200).default(''),
-  projectName: z.string().trim().max(200).optional(),
-  city: z.string().trim().min(1, 'شهر الزامی است').max(80),
-  openPositionsCount: z.coerce.number().int().min(1).max(100).default(1),
-  employmentType: z.enum(['FULL_TIME', 'PART_TIME', 'CONTRACTUAL', 'PROJECT_BASED']).default('FULL_TIME'),
-  requiredDegree: degreeEnum.optional().nullable(),
-  minYearsExperience: z.coerce.number().int().min(0).max(40).default(0),
-  requiredSkillsCsv: z.string().trim().max(1000).default(''),
-  preferredSkillsCsv: z.string().trim().max(1000).default(''),
-  description: z.string().trim().max(4000).optional(),
-  salaryRange: z.string().trim().max(100).optional(),
-  status: z.enum(['OPEN', 'IN_PROGRESS', 'FILLED', 'CANCELLED']).default('OPEN'),
-});
+export const vacancyFormSchema = z
+  .object({
+    title: z.string().trim().min(2, 'عنوان الزامی است').max(200),
+    code: z.string().trim().max(60).optional(),
+    category: z.string().trim().min(1, 'حوزه شغلی الزامی است').max(150),
+    organizationType: z.enum(['PARENT', 'SUBSIDIARY']),
+    organizationId: z.string().uuid().optional().nullable(),
+    organizationName: z.string().trim().min(2, 'نام هلدینگ یا شرکت الزامی است').max(200),
+    projectId: z.string().uuid().optional().nullable(),
+    city: z.string().trim().min(1, 'شهر الزامی است').max(80),
+    openPositionsCount: z.coerce.number().int().min(1).max(100).default(1),
+    employmentType: z.enum(['FULL_TIME', 'PART_TIME', 'CONTRACTUAL', 'PROJECT_BASED']).default('FULL_TIME'),
+    requiredDegree: degreeEnum.optional().nullable(),
+    minYearsExperience: z.coerce.number().int().min(0).max(40).default(0),
+    requiredSkillsCsv: z.string().trim().max(1000).default(''),
+    preferredSkillsCsv: z.string().trim().max(1000).default(''),
+    description: z.string().trim().max(4000).optional(),
+    salaryRange: z.string().trim().max(100).optional(),
+    status: z.enum(['OPEN', 'IN_PROGRESS', 'FILLED', 'CANCELLED']).default('OPEN'),
+  })
+  .superRefine((data, ctx) => {
+    if (data.organizationType === 'SUBSIDIARY' && !data.organizationId) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['organizationId'],
+        message: 'برای فرصت شغلی شرکت زیرمجموعه، انتخاب شرکت الزامی است.',
+      });
+    }
+    if (data.organizationType === 'PARENT' && data.organizationId) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['organizationId'],
+        message: 'فرصت هلدینگ مادر نباید به شرکت زیرمجموعه متصل شود.',
+      });
+    }
+    if (data.organizationType === 'PARENT' && data.projectId) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['projectId'],
+        message: 'پروژه باید به یکی از شرکت‌های زیرمجموعه متصل باشد.',
+      });
+    }
+    if (data.organizationType === 'SUBSIDIARY' && data.projectId && !data.organizationId) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['projectId'],
+        message: 'ابتدا شرکت زیرمجموعه را انتخاب کنید.',
+      });
+    }
+  });
 
 export const linkCandidacySchema = z.object({
   vacancyId: z.string().uuid(),

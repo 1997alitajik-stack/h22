@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useMemo, useState } from 'react';
 import { Briefcase, Building2, MapPin, Plus, Search, Users } from 'lucide-react';
 import { createVacancyAction, type SimpleActionState } from '@/app/actions/admin';
@@ -13,6 +14,12 @@ import type { SessionUser, VacancyListRow } from '@/types';
 
 const initial: SimpleActionState = { ok: false };
 
+type VacancyOrganization = {
+  id: string;
+  name: string;
+  projects: { id: string; name: string; city: string | null }[];
+};
+
 export function VacancyDirectory({
   user,
   vacancies,
@@ -24,7 +31,7 @@ export function VacancyDirectory({
   vacancies: VacancyListRow[];
   cities: string[];
   categories: string[];
-  organizations: { id: string; name: string }[];
+  organizations: VacancyOrganization[];
 }) {
   const isAdmin = user.role === 'ADMIN';
   const [q, setQ] = useState('');
@@ -163,109 +170,218 @@ function CreateVacancyModal({
 }: {
   cities: string[];
   categories: string[];
-  organizations: { id: string; name: string }[];
+  organizations: VacancyOrganization[];
   onClose: () => void;
 }) {
   const [state, formAction, pending] = useActionState(createVacancyAction, initial);
+  const router = useRouter();
+  const [organizationType, setOrganizationType] = useState<'PARENT' | 'SUBSIDIARY'>('SUBSIDIARY');
+  const [organizationId, setOrganizationId] = useState('');
+  const [projectId, setProjectId] = useState('');
+  const [parentOrganizationName, setParentOrganizationName] = useState('');
+  const [city, setCity] = useState('');
+
+  const isParent = organizationType === 'PARENT';
+  const selectedOrganization = organizations.find((organization) => organization.id === organizationId) ?? null;
+  const selectedProject = selectedOrganization?.projects.find((project) => project.id === projectId) ?? null;
+  const projectCity = selectedProject?.city?.trim() ?? '';
+  const displayedCity = projectCity || city;
 
   useEffect(() => {
-    if (state.ok) onClose();
-  }, [state.ok, onClose]);
+    if (state.ok) {
+      onClose();
+      router.refresh();
+    }
+  }, [state.ok, onClose, router]);
 
   return (
     <Modal open onClose={onClose} title="تعریف فرصت شغلی و ردیف جدید" size="lg">
-      <form action={formAction} className="space-y-4 text-xs">
-        {state.error && (
-          <p role="alert" className="rounded-[var(--radius-md)] border border-rose-200 bg-[var(--color-status-danger-bg)] p-3 font-medium text-rose-700">
-            {state.error}
+      <form action={formAction} className="flex h-[calc(90vh-8rem)] max-h-[calc(90vh-8rem)] min-h-0 flex-col text-xs">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-3">
+          {state.error && (
+            <p role="alert" className="rounded-[var(--radius-md)] border border-rose-200 bg-[var(--color-status-danger-bg)] p-3 font-medium text-rose-700">
+              {state.error}
+            </p>
+          )}
+
+          <p className="rounded-[var(--radius-md)] border border-teal-100 bg-teal-50/70 p-3 text-[11px] leading-5 text-teal-900">
+            ابتدا مشخص کنید فرصت مربوط به هلدینگ مادر است یا یکی از شرکت‌های زیرمجموعه. پروژه‌ها فقط از میان پروژه‌های ثبت‌شده برای همان شرکت انتخاب می‌شوند.
           </p>
-        )}
 
-        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-          <Field label="عنوان موقعیت شغلی" htmlFor="v-title" required className="sm:col-span-2">
-            <input id="v-title" name="title" required maxLength={200} className={inputClass} placeholder="مثال: سرپرست دفتر فنی پروژه عمرانی" />
-          </Field>
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+            <Field label="عنوان موقعیت شغلی" htmlFor="v-title" required className="sm:col-span-2">
+              <input id="v-title" name="title" required minLength={2} maxLength={200} className={inputClass} placeholder="مثال: سرپرست دفتر فنی پروژه عمرانی" />
+            </Field>
 
-          <Field label="حوزه شغلی" htmlFor="v-category" required>
-            <select id="v-category" name="category" className={selectClass} required>
-              {categories.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </Field>
+            <Field label="حوزه شغلی" htmlFor="v-category" required>
+              <select id="v-category" name="category" className={selectClass} required defaultValue={categories[0] ?? ''}>
+                {categories.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </Field>
 
-          <Field label="سازمان" htmlFor="v-orgtype" required>
-            <select id="v-orgtype" name="organizationType" className={selectClass} defaultValue="SUBSIDIARY">
-              <option value="PARENT">ستاد مرکزی سازمان</option>
-              <option value="SUBSIDIARY">شرکت تابعه</option>
-            </select>
-          </Field>
+            <Field label="محل تعریف فرصت" htmlFor="v-orgtype" required>
+              <select
+                id="v-orgtype"
+                name="organizationType"
+                className={selectClass}
+                value={organizationType}
+                onChange={(event) => {
+                  const nextType = event.target.value as 'PARENT' | 'SUBSIDIARY';
+                  setOrganizationType(nextType);
+                  setOrganizationId('');
+                  setProjectId('');
+                  setCity('');
+                }}
+                required
+              >
+                <option value="SUBSIDIARY">یکی از شرکت‌های زیرمجموعه</option>
+                <option value="PARENT">هلدینگ مادر</option>
+              </select>
+            </Field>
 
-          <Field label="شناسه سازمانی تابعه" htmlFor="v-org">
-            <select id="v-org" name="organizationId" className={selectClass}>
-              <option value="">—</option>
-              {organizations.map((o) => (
-                <option key={o.id} value={o.id}>{o.name}</option>
-              ))}
-            </select>
-          </Field>
+            {isParent ? (
+              <input type="hidden" name="organizationId" value="" />
+            ) : (
+              <Field label="شرکت زیرمجموعه" htmlFor="v-org" required>
+                <select
+                  id="v-org"
+                  name="organizationId"
+                  className={selectClass}
+                  value={organizationId}
+                  onChange={(event) => {
+                    setOrganizationId(event.target.value);
+                    setProjectId('');
+                    setCity('');
+                  }}
+                  required
+                >
+                  <option value="">انتخاب شرکت</option>
+                  {organizations.map((organization) => (
+                    <option key={organization.id} value={organization.id}>{organization.name}</option>
+                  ))}
+                </select>
+                {organizations.length === 0 && (
+                  <span className="mt-1 block text-[10px] leading-4 text-amber-700">
+                    هنوز شرکت فعالی ثبت نشده است؛ ابتدا آن را در بخش ساختار سازمانی اضافه کنید.
+                  </span>
+                )}
+              </Field>
+            )}
 
-          <Field label="نام نمایشی سازمان" htmlFor="v-orgname" required>
-            <input id="v-orgname" name="organizationName" required maxLength={200} className={inputClass} placeholder="مثال: شرکت مهندسی و توسعه سدید" />
-          </Field>
+            <Field label={isParent ? 'نام هلدینگ مادر' : 'نام شرکت انتخاب‌شده'} htmlFor="v-orgname" required>
+              <input
+                id="v-orgname"
+                name="organizationName"
+                required
+                minLength={2}
+                maxLength={200}
+                className={inputClass}
+                value={isParent ? parentOrganizationName : (selectedOrganization?.name ?? '')}
+                readOnly={!isParent}
+                onChange={(event) => {
+                  if (isParent) setParentOrganizationName(event.target.value);
+                }}
+                placeholder={isParent ? 'نام واقعی هلدینگ مادر را وارد کنید' : 'ابتدا شرکت زیرمجموعه را انتخاب کنید'}
+              />
+            </Field>
 
-          <Field label="شهر محل خدمت" htmlFor="v-city" required>
-            <input id="v-city" name="city" required list="vac-cities" maxLength={80} className={inputClass} />
-            <datalist id="vac-cities">
-              {cities.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
-          </Field>
+            {!isParent && (
+              <Field label="پروژه مرتبط (اختیاری)" htmlFor="v-project">
+                <select
+                  id="v-project"
+                  name="projectId"
+                  className={selectClass}
+                  value={projectId}
+                  disabled={!selectedOrganization}
+                  onChange={(event) => {
+                    const nextProjectId = event.target.value;
+                    const nextProject = selectedOrganization?.projects.find((project) => project.id === nextProjectId);
+                    setProjectId(nextProjectId);
+                    setCity(nextProject?.city ?? '');
+                  }}
+                >
+                  <option value="">بدون پروژه مشخص / موقعیت ستادی</option>
+                  {(selectedOrganization?.projects ?? []).map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}{project.city ? ` — ${project.city}` : ''}
+                    </option>
+                  ))}
+                </select>
+                {selectedOrganization && selectedOrganization.projects.length === 0 && (
+                  <span className="mt-1 block text-[10px] leading-4 text-slate-500">
+                    برای این شرکت پروژه فعالی ثبت نشده است. در صورت نیاز، پروژه را در بخش ساختار سازمانی اضافه کنید.
+                  </span>
+                )}
+              </Field>
+            )}
 
-          <Field label="تعداد ردیف استخدام" htmlFor="v-openings" required>
-            <input id="v-openings" name="openPositionsCount" type="number" min={1} max={100} defaultValue={1} required className={`${inputClass} num`} />
-          </Field>
+            <Field label="شهر محل خدمت" htmlFor="v-city" required>
+              <input
+                id="v-city"
+                name="city"
+                required
+                list="vac-cities"
+                maxLength={80}
+                className={inputClass}
+                value={displayedCity}
+                readOnly={Boolean(projectCity)}
+                onChange={(event) => setCity(event.target.value)}
+                placeholder="شهر محل خدمت را وارد کنید"
+              />
+              <datalist id="vac-cities">
+                {cities.map((value) => <option key={value} value={value} />)}
+              </datalist>
+              {projectCity && <span className="mt-1 block text-[10px] text-slate-500">شهر از اطلاعات پروژه انتخاب‌شده پر شده است.</span>}
+            </Field>
 
-          <Field label="نوع همکاری" htmlFor="v-emptype">
-            <select id="v-emptype" name="employmentType" className={selectClass} defaultValue="FULL_TIME">
-              {(Object.entries(EMPLOYMENT_TYPE_LABELS) as [string, string][]).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
-          </Field>
+            <Field label="تعداد ردیف استخدام" htmlFor="v-openings" required>
+              <input id="v-openings" name="openPositionsCount" type="number" min={1} max={100} defaultValue={1} required className={inputClass + ' num'} />
+            </Field>
 
-          <Field label="حداقل مدرک تحصیلی" htmlFor="v-degree">
-            <select id="v-degree" name="requiredDegree" className={selectClass}>
-              <option value="">بدون الزام</option>
-              {(Object.entries(DEGREE_LABELS) as [string, string][]).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
-          </Field>
+            <Field label="نوع همکاری" htmlFor="v-emptype">
+              <select id="v-emptype" name="employmentType" className={selectClass} defaultValue="FULL_TIME">
+                {(Object.entries(EMPLOYMENT_TYPE_LABELS) as [string, string][]).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </Field>
 
-          <Field label="حداقل سابقه کار (سال)" htmlFor="v-minexp">
-            <input id="v-minexp" name="minYearsExperience" type="number" min={0} max={40} defaultValue={0} className={`${inputClass} num`} />
-          </Field>
+            <Field label="حداقل مدرک تحصیلی" htmlFor="v-degree">
+              <select id="v-degree" name="requiredDegree" className={selectClass} defaultValue="">
+                <option value="">بدون الزام</option>
+                {(Object.entries(DEGREE_LABELS) as [string, string][]).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </Field>
 
-          <Field label="مهارت‌های الزامی (با ویرگول)" htmlFor="v-skills">
-            <input id="v-skills" name="requiredSkillsCsv" maxLength={1000} className={inputClass} placeholder="AutoCAD، نقشه‌خوانی" />
-          </Field>
+            <Field label="حداقل سابقه کار (سال)" htmlFor="v-minexp">
+              <input id="v-minexp" name="minYearsExperience" type="number" min={0} max={40} defaultValue={0} className={inputClass + ' num'} />
+            </Field>
 
-          <Field label="مهارت‌های ترجیحی (با ویرگول)" htmlFor="v-prefskills">
-            <input id="v-prefskills" name="preferredSkillsCsv" maxLength={1000} className={inputClass} />
-          </Field>
+            <Field label="مهارت‌های الزامی (با ویرگول)" htmlFor="v-skills">
+              <input id="v-skills" name="requiredSkillsCsv" maxLength={1000} className={inputClass} placeholder="AutoCAD، نقشه‌خوانی" />
+            </Field>
 
-          <Field label="بازه حقوق (اختیاری)" htmlFor="v-salary">
-            <input id="v-salary" name="salaryRange" maxLength={100} className={inputClass} placeholder="۲۵ تا ۳۲ میلیون تومان" />
-          </Field>
+            <Field label="مهارت‌های ترجیحی (با ویرگول)" htmlFor="v-prefskills">
+              <input id="v-prefskills" name="preferredSkillsCsv" maxLength={1000} className={inputClass} />
+            </Field>
 
-          <Field label="شرح شغل و انتظارات" htmlFor="v-desc" className="sm:col-span-2">
-            <textarea id="v-desc" name="description" rows={3} maxLength={4000} className={inputClass} />
-          </Field>
+            <Field label="بازه حقوق (اختیاری)" htmlFor="v-salary">
+              <input id="v-salary" name="salaryRange" maxLength={100} className={inputClass} placeholder="۲۵ تا ۳۲ میلیون تومان" />
+            </Field>
+
+            <Field label="شرح شغل و انتظارات" htmlFor="v-desc" className="sm:col-span-2">
+              <textarea id="v-desc" name="description" rows={3} maxLength={4000} className={inputClass} />
+            </Field>
+          </div>
         </div>
 
-        <div className="flex items-center justify-start gap-3 border-t border-slate-100 pt-4">
+        <input type="hidden" name="status" value="OPEN" />
+        {!isParent && <input type="hidden" name="projectName" value={selectedProject?.name ?? ''} />}
+        <div className="flex shrink-0 items-center justify-start gap-3 border-t border-slate-100 bg-white pt-4">
           <Button type="submit" loading={pending}>
             {pending ? 'در حال ایجاد…' : 'ایجاد موقعیت شغلی'}
           </Button>
