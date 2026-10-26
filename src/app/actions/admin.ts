@@ -242,22 +242,46 @@ export async function updateStageAction(
   _prev: SimpleActionState,
   formData: FormData,
 ): Promise<SimpleActionState> {
-  const user = await requireAdmin('/vacancies');
+  let user: SessionUser;
+  try {
+    user = await requireAdmin('/vacancies');
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'اجازه تغییر مرحله را ندارید.' };
+  }
+
+  const vacancyId = String(formData.get('vacancyId') ?? '');
+  if (!/^[0-9a-fA-F-]{36}$/.test(vacancyId)) {
+    return { ok: false, error: 'شناسه فرصت شغلی معتبر نیست. صفحه را تازه‌سازی کنید.' };
+  }
+
   const parsed = updateStageSchema.safeParse({
     candidacyId: formData.get('candidacyId'),
     stage: formData.get('stage'),
-    notes: formData.get('notes'),
+    // An empty form has no notes field; Zod optional() accepts undefined, not null.
+    notes: formData.get('notes') ?? undefined,
   });
   if (!parsed.success) {
-    return { ok: false, error: 'مرحله بررسی نامعتبر است.' };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'مرحله ارزیابی نامعتبر است.' };
   }
 
   try {
     await updateCandidacyStage(user, parsed.data.candidacyId, parsed.data.stage, parsed.data.notes);
+    await adminAudit(
+      user,
+      'VACANCY',
+      parsed.data.stage === 'ACCEPTED' ? 'تخصیص نهایی متقاضی و بایگانی فرصت شغلی' : 'تغییر مرحله ارزیابی متقاضی',
+      { recordIdentifier: parsed.data.candidacyId, details: parsed.data.stage },
+    );
     revalidatePath('/vacancies');
-    return { ok: true };
+    revalidatePath('/vacancies/' + vacancyId);
+    return {
+      ok: true,
+      message: parsed.data.stage === 'ACCEPTED'
+        ? 'تخصیص نهایی ثبت شد و فرصت با ذکر نام فرد تخصیص‌یافته بایگانی شد.'
+        : 'مرحله ارزیابی ذخیره شد.',
+    };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'خطا در تغییر مرحله' };
+    return { ok: false, error: err instanceof Error ? err.message : 'خطا در تغییر مرحله ارزیابی' };
   }
 }
 

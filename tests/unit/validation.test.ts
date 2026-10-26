@@ -6,6 +6,7 @@ import {
   phoneSchema,
   verifyEmploymentSchema,
   vacancyFormSchema,
+  updateStageSchema,
 } from '@/lib/validation';
 
 describe('Jalali date validation', () => {
@@ -164,5 +165,25 @@ describe('verification schema enforces documented reasons', () => {
   it('still requires a recordId uuid', () => {
     const r = verifyEmploymentSchema.safeParse({ recordId: 'x', status: 'VERIFIED', notes: '' });
     expect(r.success).toBe(false);
+  });
+});
+
+describe('candidacy stage form payload', () => {
+  it('accepts an ordinary stage update when the optional notes field is omitted', () => {
+    const parsed = updateStageSchema.safeParse({
+      candidacyId: crypto.randomUUID(),
+      stage: 'SCREENING',
+      notes: undefined,
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('validates the selected stage before the database operation', () => {
+    const parsed = updateStageSchema.safeParse({
+      candidacyId: crypto.randomUUID(),
+      stage: 'NOT_A_STAGE',
+      notes: undefined,
+    });
+    expect(parsed.success).toBe(false);
   });
 });

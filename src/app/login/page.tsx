@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth';
 import { LoginForm } from './LoginForm';
 import { BrandLogo } from '@/components/ui/BrandLogo';
+import { PublicSupportForm } from './PublicSupportForm';
 
 export const metadata = { title: 'ورود به سامانه' };
 export const dynamic = 'force-dynamic';
@@ -23,6 +24,7 @@ export default async function LoginPage() {
           </p>
           <LoginForm />
         </div>
+        <PublicSupportForm />
         <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-400">
           دسترسی به اطلاعات این سامانه محرمانه است و صرفاً برای کارکنان مجاز سازمان امکان‌پذیر است.
         </p>

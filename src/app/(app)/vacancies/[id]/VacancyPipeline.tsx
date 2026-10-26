@@ -26,7 +26,8 @@ export function VacancyPipeline({user,vacancy,applicantOptions}:{
   const router = useRouter();
   const isAdmin = user.role === 'ADMIN';
   const [linkOpen, setLinkOpen] = useState(false);
-  const [showArchived, setShowArchived] = useState(Boolean(vacancy.archived_at));
+  const acceptedCandidateIsVisible = vacancy.candidacies.some((candidate) => !candidate.archived_at && candidate.stage === 'ACCEPTED');
+  const [showArchived, setShowArchived] = useState(Boolean(vacancy.archived_at) && !acceptedCandidateIsVisible);
   const [showAllApplicants, setShowAllApplicants] = useState(false);
   const activeCount = vacancy.candidacies.filter((candidate) => !candidate.archived_at).length;
   const archivedCount = vacancy.candidacies.length - activeCount;
@@ -75,6 +76,11 @@ export function VacancyPipeline({user,vacancy,applicantOptions}:{
       {(linkState.error || stageState.error) && (
         <p role="alert" className="mx-5 mt-3 rounded-[var(--radius-md)] border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-800">
           {linkState.error || stageState.error}
+        </p>
+      )}
+      {stageState.ok && stageState.message && (
+        <p role="status" className="mx-5 mt-3 rounded-[var(--radius-md)] border border-emerald-200 bg-emerald-50 p-3 text-xs font-medium text-emerald-800">
+          {stageState.message}
         </p>
       )}
 
@@ -126,6 +132,7 @@ export function VacancyPipeline({user,vacancy,applicantOptions}:{
                     {isAdmin && !candidate.archived_at && !vacancy.archived_at ? (
                       <form action={handleStageAction} className="flex items-center gap-2">
                         <input type="hidden" name="candidacyId" value={candidate.id} />
+                        <input type="hidden" name="vacancyId" value={vacancy.id} />
                         <select name="stage" defaultValue={candidate.stage} disabled={stagePending} className="rounded-[var(--radius-sm)] border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-medium text-slate-800 disabled:opacity-50" aria-label={'تغییر مرحله ' + candidate.applicant_name}>
                           {STAGE_ORDER.map((stage) => <option key={stage} value={stage}>{CANDIDACY_STAGE_LABELS[stage]}</option>)}
                         </select>
@@ -134,13 +141,17 @@ export function VacancyPipeline({user,vacancy,applicantOptions}:{
                     ) : <CandidacyStageBadge stage={candidate.stage} />}
                   </td>
                   {isAdmin && <td className="px-3 py-3">
-                    <CandidacyArchiveControl
-                      candidacyId={candidate.id}
-                      vacancyId={vacancy.id}
-                      archived={Boolean(candidate.archived_at)}
-                      archiveReason={candidate.archive_reason}
-                      vacancyArchived={Boolean(vacancy.archived_at)}
-                    />
+                    {vacancy.archived_at && candidate.stage === 'ACCEPTED' && !candidate.archived_at ? (
+                      <span className="rounded-[var(--radius-sm)] bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-800">فرد تخصیص‌یافته</span>
+                    ) : (
+                      <CandidacyArchiveControl
+                        candidacyId={candidate.id}
+                        vacancyId={vacancy.id}
+                        archived={Boolean(candidate.archived_at)}
+                        archiveReason={candidate.archive_reason}
+                        vacancyArchived={Boolean(vacancy.archived_at)}
+                      />
+                    )}
                   </td>}
                 </tr>
               ))}
